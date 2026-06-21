@@ -407,11 +407,27 @@ function SetupWizard() {
             locale={locale}
             selectPlaceholder={t.select}
             onStartChange={(workStartTime) => {
-              setData((d) => ({ ...d, hours: { ...d.hours, workStartTime } }));
+              setData((d) => ({
+                ...d,
+                hours: {
+                  ...d.hours,
+                  workStartTime,
+                  breakStart: '',
+                  breakEnd: '',
+                },
+              }));
               setHoursErrors({});
             }}
             onEndChange={(workEndTime) => {
-              setData((d) => ({ ...d, hours: { ...d.hours, workEndTime } }));
+              setData((d) => ({
+                ...d,
+                hours: {
+                  ...d.hours,
+                  workEndTime,
+                  breakStart: '',
+                  breakEnd: '',
+                },
+              }));
               setHoursErrors({});
             }}
             error={hoursErrors.workHours}
@@ -440,6 +456,10 @@ function SetupWizard() {
               endValue={data.hours.breakEnd}
               locale={locale}
               selectPlaceholder={t.select}
+              minTime={data.hours.workStartTime}
+              maxTime={data.hours.workEndTime}
+              disabled={!data.hours.workStartTime || !data.hours.workEndTime}
+              disabledTitle="Set opening and closing times first"
               onStartChange={(breakStart) => {
                 setData((d) => ({ ...d, hours: { ...d.hours, breakStart } }));
                 setHoursErrors({});

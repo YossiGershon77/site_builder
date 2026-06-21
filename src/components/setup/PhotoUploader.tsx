@@ -2,7 +2,6 @@
 'use client';
 
 import Image from 'next/image';
-import { useRef } from 'react';
 import type { SetupGalleryPhoto } from '@/lib/mock';
 
 interface PhotoUploaderProps {
@@ -35,8 +34,6 @@ export function PhotoUploader({
   fileTypesLabel = 'JPG, PNG up to 5MB each',
   photoHintLabel = 'We recommend at least 3 photos for the best looking gallery',
 }: PhotoUploaderProps) {
-  const inputRef = useRef<HTMLInputElement>(null);
-
   function addPhotosFromFiles(files: FileList | null) {
     if (!files) return;
 
@@ -79,20 +76,7 @@ export function PhotoUploader({
 
   return (
     <div>
-      <input
-        ref={inputRef}
-        type="file"
-        accept="image/jpeg,image/png,image/jpg,image/webp"
-        multiple
-        className="hidden"
-        onChange={(e) => {
-          addPhotosFromFiles(e.target.files);
-          e.target.value = '';
-        }}
-      />
-      <button
-        type="button"
-        onClick={() => inputRef.current?.click()}
+      <label
         onDragOver={(e) => {
           e.preventDefault();
           e.stopPropagation();
@@ -102,12 +86,22 @@ export function PhotoUploader({
           e.stopPropagation();
           addPhotosFromFiles(e.dataTransfer.files);
         }}
-        className="w-full border-2 border-dashed border-gray-200 rounded-xl p-8 text-center hover:border-gray-400 transition-colors"
+        className="block w-full border-2 border-dashed border-gray-200 rounded-xl p-8 text-center hover:border-gray-400 transition-colors cursor-pointer"
       >
+        <input
+          type="file"
+          accept="image/jpeg,image/png,image/jpg,image/webp"
+          multiple
+          className="sr-only"
+          onChange={(e) => {
+            addPhotosFromFiles(e.target.files);
+            e.target.value = '';
+          }}
+        />
         <span className="text-3xl block mb-2" aria-hidden>📷</span>
         <p className="text-sm font-medium text-[#111111]">{clickUploadLabel}</p>
         <p className="text-xs text-gray-400 mt-1">{fileTypesLabel}</p>
-      </button>
+      </label>
 
       {photos.length > 0 && (
         <div className="grid grid-cols-3 gap-3 mt-4">

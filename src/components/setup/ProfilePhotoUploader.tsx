@@ -2,7 +2,6 @@
 'use client';
 
 import Image from 'next/image';
-import { useRef } from 'react';
 
 interface ProfilePhotoUploaderProps {
   photo: string | null;
@@ -17,8 +16,6 @@ export function ProfilePhotoUploader({
   uploadLabel = 'Upload photo',
   removeLabel = 'Remove',
 }: ProfilePhotoUploaderProps) {
-  const inputRef = useRef<HTMLInputElement>(null);
-
   function handleFile(file: File | undefined) {
     if (!file) return;
     if (!/^image\/(jpeg|png|jpg|webp)$/i.test(file.type)) return;
@@ -33,16 +30,6 @@ export function ProfilePhotoUploader({
 
   return (
     <div className="flex flex-col items-center">
-      <input
-        ref={inputRef}
-        type="file"
-        accept="image/jpeg,image/png,image/jpg,image/webp"
-        className="hidden"
-        onChange={(e) => {
-          handleFile(e.target.files?.[0]);
-          e.target.value = '';
-        }}
-      />
       <div className="relative w-32 h-32 rounded-full border-2 border-dashed border-gray-200 overflow-hidden bg-gray-50">
         {photo ? (
           photo.startsWith('blob:') || photo.startsWith('data:') ? (
@@ -57,13 +44,18 @@ export function ProfilePhotoUploader({
           </div>
         )}
       </div>
-      <button
-        type="button"
-        onClick={() => inputRef.current?.click()}
-        className="mt-4 px-4 py-2 text-sm font-medium bg-[#111111] text-white rounded-xl hover:bg-gray-800 transition-colors"
-      >
+      <label className="mt-4 px-4 py-2 text-sm font-medium bg-[#111111] text-white rounded-xl hover:bg-gray-800 transition-colors cursor-pointer">
+        <input
+          type="file"
+          accept="image/jpeg,image/png,image/jpg,image/webp"
+          className="sr-only"
+          onChange={(e) => {
+            handleFile(e.target.files?.[0]);
+            e.target.value = '';
+          }}
+        />
         {uploadLabel}
-      </button>
+      </label>
       {photo && (
         <button
           type="button"

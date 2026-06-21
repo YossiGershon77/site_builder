@@ -129,13 +129,14 @@ export function SetupComplete({
         </div>
 
         <div className="mt-8 flex flex-col sm:flex-row gap-3">
-          <Link
-            href="/"
+          <a
+            href={`https://${siteUrl}`}
             target="_blank"
+            rel="noreferrer"
             className="flex-1 py-3.5 bg-[#111111] text-white font-semibold rounded-xl hover:bg-gray-800 transition-colors text-center"
           >
             Visit your site →
-          </Link>
+          </a>
           <Link
             href="/dashboard"
             className="flex-1 py-3.5 border-2 border-[#111111] text-[#111111] font-semibold rounded-xl hover:bg-gray-50 transition-colors text-center"

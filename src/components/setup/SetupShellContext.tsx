@@ -63,8 +63,27 @@ function SetupShell({
             <button
               type="button"
               onClick={onSaveExit}
-              className="text-sm text-gray-500 hover:text-[#111111] transition-colors whitespace-nowrap"
+              className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-[#111111] transition-colors whitespace-nowrap"
             >
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={1.8}
+                aria-hidden
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M17 3H7a2 2 0 00-2 2v14a2 2 0 002 2h10a2 2 0 002-2V7l-2-4z"
+                />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M9 3v6h6V3M9 17h6"
+                />
+              </svg>
               {t.saveExit}
             </button>
           </div>
