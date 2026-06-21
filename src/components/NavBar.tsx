@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useLanguage } from '@/lib/i18n/context';
 import { LanguageToggle } from '@/components/LanguageToggle';
+import { getMockAuthenticatedUser } from '@/lib/auth/mock-auth';
+import type { MockUser } from '@/lib/mock';
 
 interface NavBarProps {
   barberName: string;
@@ -13,6 +15,7 @@ export function NavBar({ barberName }: NavBarProps) {
   const { t } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [authenticatedUser, setAuthenticatedUser] = useState<MockUser | null>(null);
 
   const navLinks = [
     { href: '/services', label: t.nav.services },
@@ -25,6 +28,21 @@ export function NavBar({ barberName }: NavBarProps) {
     const handleScroll = () => setScrolled(window.scrollY > 10);
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  useEffect(() => {
+    const syncUser = () => {
+      setAuthenticatedUser(getMockAuthenticatedUser());
+    };
+
+    syncUser();
+    window.addEventListener('storage', syncUser);
+    window.addEventListener('cutsite-auth-change', syncUser);
+
+    return () => {
+      window.removeEventListener('storage', syncUser);
+      window.removeEventListener('cutsite-auth-change', syncUser);
+    };
   }, []);
 
   return (
@@ -52,6 +70,14 @@ export function NavBar({ barberName }: NavBarProps) {
                 {link.label}
               </Link>
             ))}
+            {authenticatedUser && (
+              <Link
+                href="/dashboard"
+                className="text-sm font-medium text-[#111111] hover:text-gray-600 transition-colors whitespace-nowrap"
+              >
+                {t.nav.manage}
+              </Link>
+            )}
             <Link
               href="/booking"
               className="bg-[#111111] text-white text-sm px-5 py-2 rounded-full hover:bg-gray-800 transition-colors whitespace-nowrap"
@@ -92,6 +118,15 @@ export function NavBar({ barberName }: NavBarProps) {
                 {link.label}
               </Link>
             ))}
+            {authenticatedUser && (
+              <Link
+                href="/dashboard"
+                className="block px-2 py-3 text-sm font-medium text-[#111111] hover:text-gray-600 transition-colors"
+                onClick={() => setIsOpen(false)}
+              >
+                {t.nav.manage}
+              </Link>
+            )}
             <Link
               href="/booking"
               className="block mt-2 bg-[#111111] text-white text-sm px-5 py-3 rounded-full text-center hover:bg-gray-800 transition-colors"

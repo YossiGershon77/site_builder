@@ -1,10 +1,8 @@
 'use client';
 
-import { createContext, useContext } from 'react';
+import { createContext, useContext, useEffect, useState } from 'react';
 import { mockBarber, mockCurrentUser, type MockBarber, type MockUser } from '@/lib/mock';
-
-// Swap mockCurrentUser with mockCurrentUserAsStaff to test the staff view
-const activeUser = mockCurrentUser;
+import { getMockAuthenticatedUser } from '@/lib/auth/mock-auth';
 
 interface DashboardContextValue {
   user: MockUser;
@@ -14,6 +12,23 @@ interface DashboardContextValue {
 const DashboardContext = createContext<DashboardContextValue | null>(null);
 
 export function DashboardProvider({ children }: { children: React.ReactNode }) {
+  const [activeUser, setActiveUser] = useState<MockUser>(mockCurrentUser);
+
+  useEffect(() => {
+    const syncUser = () => {
+      setActiveUser(getMockAuthenticatedUser() ?? mockCurrentUser);
+    };
+
+    syncUser();
+    window.addEventListener('storage', syncUser);
+    window.addEventListener('cutsite-auth-change', syncUser);
+
+    return () => {
+      window.removeEventListener('storage', syncUser);
+      window.removeEventListener('cutsite-auth-change', syncUser);
+    };
+  }, []);
+
   return (
     <DashboardContext.Provider value={{ user: activeUser, barber: mockBarber }}>
       {children}

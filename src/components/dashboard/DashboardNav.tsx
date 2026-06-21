@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useDashboard } from '@/lib/dashboard/context';
+import { clearMockAuthenticatedUser } from '@/lib/auth/mock-auth';
 
 function NavIcon({ name }: { name: string }) {
   const icons: Record<string, React.ReactNode> = {
@@ -110,7 +111,10 @@ export function DashboardSidebar() {
         </Link>
         <button
           type="button"
-          onClick={() => router.push('/login')}
+          onClick={() => {
+            clearMockAuthenticatedUser();
+            router.push('/login');
+          }}
           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-600 hover:bg-gray-50 hover:text-[#111111] transition-colors"
         >
           <NavIcon name="logout" />
@@ -197,8 +201,10 @@ export function DashboardMobileNav() {
                 type="button"
                 onClick={() => {
                   setMoreOpen(false);
-                  if (item.label === 'Sign out') router.push('/login');
-                  else router.push(item.href);
+                  if (item.label === 'Sign out') {
+                    clearMockAuthenticatedUser();
+                    router.push('/login');
+                  } else router.push(item.href);
                 }}
                 className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-gray-700 hover:bg-gray-50"
               >

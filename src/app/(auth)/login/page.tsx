@@ -2,11 +2,9 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { mockLoginEmails } from '@/lib/mock';
 import { LanguageToggle } from '@/components/LanguageToggle';
 import { useLanguage } from '@/lib/i18n/context';
-
-const validEmails = mockLoginEmails;
+import { findMockUserByEmail, setMockAuthenticatedUser } from '@/lib/auth/mock-auth';
 
 function ScissorsIcon({ className = '' }: { className?: string }) {
   return (
@@ -36,7 +34,9 @@ export default function LoginPage() {
 
     console.log('Login attempt:', { email, password });
 
-    if (validEmails.includes(email)) {
+    const user = findMockUserByEmail(email);
+    if (user) {
+      setMockAuthenticatedUser(user.email);
       router.push('/dashboard');
       return;
     }
