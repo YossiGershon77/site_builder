@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { mockLoginEmails } from '@/lib/mock';
+import { LanguageToggle } from '@/components/LanguageToggle';
+import { useLanguage } from '@/lib/i18n/context';
 
 const validEmails = mockLoginEmails;
 
@@ -18,6 +20,7 @@ function ScissorsIcon({ className = '' }: { className?: string }) {
 
 export default function LoginPage() {
   const router = useRouter();
+  const { t, locale } = useLanguage();
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -38,7 +41,7 @@ export default function LoginPage() {
       return;
     }
 
-    setError('Invalid email or password');
+    setError(t.login.invalidCredentials);
     setLoading(false);
   }
 
@@ -65,21 +68,25 @@ export default function LoginPage() {
 
         <div className="relative z-10 space-y-6 max-w-md">
           <h2 className="text-4xl xl:text-5xl font-semibold text-white leading-tight tracking-tight">
-            Run your shop,<br />not your inbox.
+            {t.login.heroTitle}
           </h2>
           <p className="text-white/50 text-lg leading-relaxed">
-            Appointments, team schedules, and client management — all in one place.
+            {t.login.heroDescription}
           </p>
         </div>
 
         <p className="relative z-10 text-white/30 text-sm">
-          Trusted by barbers across Israel
+          {t.login.trustedBy}
         </p>
       </div>
 
       {/* Form panel */}
       <div className="flex-1 flex flex-col items-center justify-center px-6 py-12 bg-gray-50">
         <div className="w-full max-w-[400px]">
+          <div className="flex justify-end mb-6">
+            <LanguageToggle />
+          </div>
+
           {/* Mobile logo */}
           <div className="lg:hidden flex items-center justify-center gap-2.5 mb-10">
             <div className="w-9 h-9 rounded-xl bg-[#111111] flex items-center justify-center">
@@ -90,16 +97,18 @@ export default function LoginPage() {
 
           <div className="bg-white rounded-2xl border border-gray-200/80 shadow-sm p-8 sm:p-10">
             <div className="mb-8">
-              <h1 className="text-2xl font-semibold text-[#111111] tracking-tight">Staff login</h1>
+              <h1 className="text-2xl font-semibold text-[#111111] tracking-tight">
+                {t.login.title}
+              </h1>
               <p className="text-sm text-gray-500 mt-1.5">
-                For barbers and team members only
+                {t.login.subtitle}
               </p>
             </div>
 
             <form onSubmit={handleSubmit} method="post" className="space-y-5">
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1.5">
-                  Email
+                  {t.login.email}
                 </label>
                 <input
                   id="email"
@@ -107,14 +116,14 @@ export default function LoginPage() {
                   type="email"
                   autoComplete="email"
                   required
-                  placeholder="you@shop.com"
+                  placeholder={t.login.emailPlaceholder}
                   className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm placeholder:text-gray-300 focus:outline-none focus:ring-2 focus:ring-[#111111]/10 focus:border-gray-400 transition-all bg-white"
                 />
               </div>
 
               <div>
                 <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1.5">
-                  Password
+                  {t.login.password}
                 </label>
                 <div className="relative">
                   <input
@@ -124,13 +133,17 @@ export default function LoginPage() {
                     autoComplete="current-password"
                     required
                     placeholder="••••••••"
-                    className="w-full px-4 py-3 pr-11 border border-gray-200 rounded-xl text-sm placeholder:text-gray-300 focus:outline-none focus:ring-2 focus:ring-[#111111]/10 focus:border-gray-400 transition-all bg-white"
+                    className={`w-full px-4 py-3 border border-gray-200 rounded-xl text-sm placeholder:text-gray-300 focus:outline-none focus:ring-2 focus:ring-[#111111]/10 focus:border-gray-400 transition-all bg-white ${
+                      locale === 'he' ? 'pl-11' : 'pr-11'
+                    }`}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600 transition-colors"
-                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    className={`absolute top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600 transition-colors ${
+                      locale === 'he' ? 'left-3' : 'right-3'
+                    }`}
+                    aria-label={showPassword ? t.login.hidePassword : t.login.showPassword}
                   >
                     {showPassword ? (
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -160,7 +173,7 @@ export default function LoginPage() {
                 disabled={loading}
                 className="w-full py-3.5 bg-[#111111] text-white font-semibold rounded-xl hover:bg-gray-800 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                {loading ? 'Signing in…' : 'Sign in'}
+                {loading ? t.login.signingIn : t.login.signIn}
               </button>
             </form>
 
@@ -169,21 +182,19 @@ export default function LoginPage() {
                 type="button"
                 className="text-sm text-gray-400 hover:text-gray-600 transition-colors"
               >
-                Forgot password?
+                {t.login.forgotPassword}
               </button>
             </div>
           </div>
 
-          {process.env.NODE_ENV === 'development' && (
-            <div className="mt-6 p-4 rounded-xl bg-white border border-dashed border-gray-200">
-              <p className="text-xs font-medium text-gray-500 mb-2">Demo credentials</p>
-              <div className="space-y-1 text-xs text-gray-400 font-mono">
-                <p>Admin: eduardo@demo.com</p>
-                <p>Staff: yossi@demo.com · amit@demo.com</p>
-                <p>Staff: daniel@demo.com · ronen@demo.com</p>
-              </div>
+          <div className="mt-6 p-4 rounded-xl bg-white border border-dashed border-gray-200">
+            <p className="text-xs font-medium text-gray-500 mb-2">{t.login.demoTitle}</p>
+            <div className="space-y-1 text-xs text-gray-400 font-mono">
+              <p>{t.login.adminDemo}</p>
+              <p>{t.login.staffDemoPrimary}</p>
+              <p>{t.login.staffDemoSecondary}</p>
             </div>
-          )}
+          </div>
         </div>
       </div>
     </div>
