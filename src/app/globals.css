@@ -46,6 +46,15 @@
     }
   }
 
+  @keyframes gallery-marquee {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(-50%);
+    }
+  }
+
   .animate-shake {
     animation: shake 300ms ease-in-out;
   }
@@ -60,5 +69,15 @@
 
   .animate-confetti {
     animation: confetti-fly 2s ease-out forwards;
+  }
+
+  .animate-gallery-marquee {
+    animation-name: gallery-marquee;
+    animation-timing-function: linear;
+    animation-iteration-count: infinite;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
   }
 }

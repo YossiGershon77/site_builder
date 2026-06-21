@@ -4,6 +4,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useLanguage } from '@/lib/i18n/context';
 import { TeamMemberCard } from '@/components/TeamMemberCard';
+import { GalleryStrip } from '@/components/public/GalleryStrip';
 
 export default function HomePage() {
   const { t } = useLanguage();
@@ -48,6 +49,8 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      <GalleryStrip images={barber.galleryImages} />
 
       <section className="py-16 px-4">
         <div className="max-w-6xl mx-auto">
