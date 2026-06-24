@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import { ScheduleCalendar } from '@/components/dashboard/ScheduleCalendar';
 import { useDashboard } from '@/lib/dashboard/context';
+import { useLanguage } from '@/lib/i18n/context';
 import { getDaysOffForDate, useDaysOff } from '@/lib/days-off/store';
 import {
   filterAppointmentsForDay,
@@ -13,7 +14,13 @@ import {
 } from '@/lib/dashboard/utils';
 import type { Appointment, AppointmentStatus } from '@/lib/mock';
 
-function StatusBadge({ status }: { status: AppointmentStatus }) {
+function StatusBadge({
+  status,
+  label,
+}: {
+  status: AppointmentStatus;
+  label: string;
+}) {
   const styles: Record<AppointmentStatus, string> = {
     CONFIRMED: 'bg-green-50 text-green-700',
     PENDING: 'bg-yellow-50 text-yellow-700',
@@ -22,12 +29,13 @@ function StatusBadge({ status }: { status: AppointmentStatus }) {
 
   return (
     <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${styles[status]}`}>
-      {status.charAt(0) + status.slice(1).toLowerCase()}
+      {label}
     </span>
   );
 }
 
 function AppointmentCard({ appointment }: { appointment: Appointment }) {
+  const { t } = useLanguage();
   const cancelled = appointment.status === 'CANCELLED';
 
   return (
@@ -47,12 +55,18 @@ function AppointmentCard({ appointment }: { appointment: Appointment }) {
         <p className="font-medium text-[#111111]">{appointment.clientName}</p>
         <p className="text-sm text-gray-500">{appointment.service.name}</p>
         <p className="text-xs text-gray-400 mt-0.5">
-          with {appointment.teamMember?.name ?? 'Eduardo Peretz'}
+          {t.dashboard.schedule.with.replace(
+            '{name}',
+            appointment.teamMember?.name ?? t.dashboard.schedule.ownerName,
+          )}
         </p>
       </div>
 
       <div className="flex-shrink-0">
-        <StatusBadge status={appointment.status} />
+        <StatusBadge
+          status={appointment.status}
+          label={t.dashboard.status[appointment.status]}
+        />
       </div>
     </div>
   );
@@ -60,6 +74,7 @@ function AppointmentCard({ appointment }: { appointment: Appointment }) {
 
 export default function SchedulePage() {
   const { user, barber } = useDashboard();
+  const { locale, t } = useLanguage();
   const [selectedDate, setSelectedDate] = useState(() => {
     const d = new Date();
     d.setHours(0, 0, 0, 0);
@@ -82,7 +97,7 @@ export default function SchedulePage() {
   const nextAvailable = getNextAvailableSlot(activeAppointments, barber, selectedDate);
 
   const teamFilterOptions = [
-    { value: 'all', label: 'All' },
+    { value: 'all', label: t.dashboard.schedule.all },
     { value: 'owner', label: 'Eduardo' },
     ...barber.teamMembers
       .filter((m) => m.inviteAccepted && m.isActive)
@@ -93,8 +108,10 @@ export default function SchedulePage() {
     <div className="max-w-5xl">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-semibold text-[#111111]">Schedule</h1>
-          <p className="text-sm text-gray-500 mt-0.5">{formatDateHeading(selectedDate)}</p>
+          <h1 className="text-2xl font-semibold text-[#111111]">{t.dashboard.schedule.title}</h1>
+          <p className="text-sm text-gray-500 mt-0.5">
+            {formatDateHeading(selectedDate, locale)}
+          </p>
         </div>
 
         {user.role === 'OWNER' && (
@@ -128,11 +145,11 @@ export default function SchedulePage() {
             />
           </svg>
           <div>
-            <p className="text-sm font-medium text-amber-900">Staff days off</p>
+            <p className="text-sm font-medium text-amber-900">{t.dashboard.schedule.staffDaysOff}</p>
             <ul className="mt-1 space-y-0.5">
               {daysOffNotice.map((entry) => (
                 <li key={entry.id} className="text-sm text-amber-800">
-                  {entry.name} is off
+                  {t.dashboard.schedule.isOff.replace('{name}', entry.name)}
                 </li>
               ))}
             </ul>
@@ -157,7 +174,7 @@ export default function SchedulePage() {
                   d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5"
                 />
               </svg>
-              <p className="text-gray-500">No appointments on this day</p>
+              <p className="text-gray-500">{t.dashboard.schedule.noAppointments}</p>
             </div>
           ) : (
             <div className="space-y-3">
@@ -170,7 +187,12 @@ export default function SchedulePage() {
                     {gap >= 30 && (
                       <div className="flex items-center gap-3 py-3">
                         <div className="flex-1 border-t border-dashed border-gray-300" />
-                        <span className="text-xs text-gray-400">{Math.round(gap)} min break</span>
+                        <span className="text-xs text-gray-400">
+                          {t.dashboard.schedule.break.replace(
+                            '{minutes}',
+                            String(Math.round(gap)),
+                          )}
+                        </span>
                         <div className="flex-1 border-t border-dashed border-gray-300" />
                       </div>
                     )}
@@ -183,9 +205,17 @@ export default function SchedulePage() {
 
           {appointments.length > 0 && (
             <div className="mt-6 p-4 bg-white rounded-xl border border-gray-200 text-sm text-gray-600">
-              {activeAppointments.length} appointment{activeAppointments.length !== 1 ? 's' : ''}
+              {activeAppointments.length === 1
+                ? t.dashboard.schedule.appointmentCountOne
+                : t.dashboard.schedule.appointmentCount.replace(
+                    '{count}',
+                    String(activeAppointments.length),
+                  )}
               {nextAvailable && (
-                <span className="text-gray-400"> · Next available: {nextAvailable}</span>
+                <span className="text-gray-400">
+                  {' · '}
+                  {t.dashboard.schedule.nextAvailable.replace('{time}', nextAvailable)}
+                </span>
               )}
             </div>
           )}
@@ -196,6 +226,7 @@ export default function SchedulePage() {
             selectedDate={selectedDate}
             onSelectDate={setSelectedDate}
             workingDays={barber.workingDays}
+            labels={t.dashboard.schedule}
           />
         </div>
       </div>

@@ -5,33 +5,59 @@ import Link from 'next/link';
 import { useLanguage } from '@/lib/i18n/context';
 import { TeamMemberCard } from '@/components/TeamMemberCard';
 import { GalleryStrip } from '@/components/public/GalleryStrip';
+import { ServiceGrid } from '@/components/public/ServiceGrid';
+import type { MockBarber } from '@/lib/mock';
+
+function getPopularServices(barber: MockBarber) {
+  const counts = new Map<string, number>();
+
+  for (const appointment of barber.appointments ?? []) {
+    if (appointment.status === 'CANCELLED') continue;
+    counts.set(appointment.service.id, (counts.get(appointment.service.id) ?? 0) + 1);
+  }
+
+  return [...barber.services]
+    .filter((service) => service.isActive)
+    .sort((a, b) => {
+      const countDiff = (counts.get(b.id) ?? 0) - (counts.get(a.id) ?? 0);
+      return countDiff || a.displayOrder - b.displayOrder;
+    })
+    .slice(0, 3);
+}
 
 export default function HomePage() {
   const { t } = useLanguage();
   const barber = t.barber;
-  const previewServices = barber.services.slice(0, 3);
-  const hasTeam = barber.teamMembers.length > 0;
+  const previewServices = getPopularServices(barber);
+  const acceptedTeamMembers = barber.teamMembers.filter((member) => member.inviteAccepted);
+  const hasTeam = acceptedTeamMembers.length > 0;
 
   return (
     <div>
       <section className="relative h-[85vh] md:h-screen flex items-center justify-center overflow-hidden">
-        <Image
-          src={barber.heroImageUrl}
-          alt={barber.name}
-          fill
-          className="object-cover"
-          priority
-          sizes="100vw"
-        />
+        {barber.heroImageUrl ? (
+          <Image
+            src={barber.heroImageUrl}
+            alt={barber.name}
+            fill
+            className="object-cover"
+            priority
+            sizes="100vw"
+          />
+        ) : (
+          <div className="absolute inset-0 bg-gray-900" />
+        )}
         <div className="absolute inset-0 bg-black/25" />
 
         <div className="relative z-10 text-center px-4 max-w-3xl mx-auto">
           <h1 className="text-5xl md:text-7xl font-semibold tracking-tight text-white">
             {barber.name}
           </h1>
-          <p className="text-lg md:text-xl text-white/80 mt-3">{barber.tagline}</p>
+          {barber.tagline && (
+            <p className="text-lg md:text-xl text-white/80 mt-3">{barber.tagline}</p>
+          )}
           <p className="text-xs uppercase tracking-widest text-white/60 mt-2">
-            {barber.neighborhood}
+            {barber.address || t.common.locationNotSet}
           </p>
           <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
             <Link
@@ -57,17 +83,10 @@ export default function HomePage() {
           <h2 className="text-2xl font-semibold tracking-tight text-[#111111] mb-6">
             {t.home.whatWeDo}
           </h2>
-          <div className="border border-gray-100 rounded-xl overflow-hidden divide-y divide-gray-100">
-            {previewServices.map((service) => (
-              <div
-                key={service.id}
-                className="flex items-center justify-between px-6 py-4"
-              >
-                <p className="font-medium text-[#111111]">{service.name}</p>
-                <p className="font-semibold text-[#111111]">{service.priceDisplay}</p>
-              </div>
-            ))}
-          </div>
+          <ServiceGrid
+            services={previewServices}
+            columnsClassName="grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
+          />
           <div className="mt-4 text-right">
             <Link
               href="/services"
@@ -85,8 +104,8 @@ export default function HomePage() {
             <h2 className="text-2xl font-semibold tracking-tight text-[#111111] mb-8">
               {t.home.theTeam}
             </h2>
-            <div className="flex flex-wrap gap-10">
-              {barber.teamMembers.map((member) => (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-10">
+              {acceptedTeamMembers.map((member) => (
                 <TeamMemberCard key={member.id} member={member} variant="circle" />
               ))}
             </div>

@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import type { BarberService } from '@/lib/mock';
-import type { ServiceBankItem } from '@/lib/service-bank';
+import { FALLBACK_SERVICE_IMAGE, type ServiceBankItem } from '@/lib/service-bank';
 
 interface ServiceBankCardProps {
   item: ServiceBankItem;
@@ -31,11 +31,14 @@ export function ServiceBankCard({
     >
       <div className="relative aspect-[4/3] bg-gray-100 flex-shrink-0">
         <Image
-          src={item.imageUrl}
+          src={item.defaultImageUrl}
           alt={name}
           fill
           className="object-cover"
           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+          onError={(event) => {
+            event.currentTarget.src = FALLBACK_SERVICE_IMAGE;
+          }}
         />
       </div>
 

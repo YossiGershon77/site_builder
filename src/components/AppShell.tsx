@@ -1,9 +1,11 @@
 'use client';
 
-import Link from 'next/link';
 import { useLanguage } from '@/lib/i18n/context';
 import { NavBar } from '@/components/NavBar';
+import { PageTransition } from '@/components/PageTransition';
 import { WhatsAppButton } from '@/components/WhatsAppButton';
+import { AdminEditBar } from '@/components/public/AdminEditBar';
+import { Footer } from '@/components/public/Footer';
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { t } = useLanguage();
@@ -18,29 +20,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       )}
 
       <NavBar barberName={barber.name} />
+      <AdminEditBar />
 
-      <main>{children}</main>
+      <main>
+        <PageTransition>{children}</PageTransition>
+      </main>
 
-      <footer className="border-t border-gray-100 py-10 px-4">
-        <div className="max-w-6xl mx-auto text-center space-y-1">
-          <p className="text-sm text-gray-400">
-            {barber.name} · {barber.neighborhood}
-          </p>
-          {barber.whatsappNumber && (
-            <Link
-              href={`https://wa.me/${barber.whatsappNumber.replace(/[^0-9]/g, '')}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-block text-xs text-gray-400 hover:text-gray-600 transition-colors"
-            >
-              {t.common.whatsapp}
-            </Link>
-          )}
-          <p className="text-xs text-gray-400">{t.common.poweredBy}</p>
-        </div>
-      </footer>
+      <Footer barber={barber} />
 
-      <WhatsAppButton whatsappNumber={barber.whatsappNumber} />
+      {barber.whatsappNumber && <WhatsAppButton whatsappNumber={barber.whatsappNumber} />}
     </>
   );
 }

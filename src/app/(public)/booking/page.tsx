@@ -4,7 +4,6 @@ import Image from 'next/image';
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useLanguage } from '@/lib/i18n/context';
-import type { Translations } from '@/lib/i18n/translations';
 import { getBarberServiceByBankId, type BarberService, type TeamMember } from '@/lib/mock';
 import {
   getAvailableSlots,
@@ -26,7 +25,11 @@ function getSteps(hasTeam: boolean): WizardStep[] {
     : ['service', 'datetime', 'details'];
 }
 
-function getStepTitle(step: WizardStep, hasTeam: boolean, t: Translations): string {
+function getStepTitle(
+  step: WizardStep,
+  hasTeam: boolean,
+  t: ReturnType<typeof useLanguage>['t'],
+): string {
   switch (step) {
     case 'service':
       return t.booking.step1;
@@ -161,7 +164,8 @@ function BookingWizard() {
   const searchParams = useSearchParams();
   const { t, locale } = useLanguage();
   const barber = t.barber;
-  const hasTeam = barber.teamMembers.length > 0;
+  const acceptedTeamMembers = barber.teamMembers.filter((member) => member.inviteAccepted);
+  const hasTeam = acceptedTeamMembers.length > 0;
   const steps = getSteps(hasTeam);
   const mockBookings = useMemo(() => getMockBookings(), []);
   const { daysOff } = useDaysOff();
@@ -246,7 +250,7 @@ function BookingWizard() {
     setSelectedTime(null);
 
     if (memberId !== 'anyone' && selectedServiceId) {
-      const member = barber.teamMembers.find((m) => m.id === memberId);
+      const member = acceptedTeamMembers.find((m) => m.id === memberId);
       if (member && !memberOffersService(member, selectedServiceId)) {
         setStaffError(true);
         return;
@@ -398,12 +402,14 @@ function BookingWizard() {
                           locale === 'en' ? 'text-end' : 'text-start'
                         }`}
                       >
-                        {barber.showPrices && (
+                        {service.priceDisplay && (
                           <p className="font-semibold text-[#111111]">{service.priceDisplay}</p>
                         )}
-                        <p className="text-sm text-gray-500">
-                          {service.durationMinutes} {t.common.min}
-                        </p>
+                        {service.showDuration && (
+                          <p className="text-sm text-gray-500">
+                            {service.durationMinutes} {t.common.min}
+                          </p>
+                        )}
                       </div>
                     </div>
                   </button>
@@ -457,9 +463,7 @@ function BookingWizard() {
               </p>
             </button>
 
-            {barber.teamMembers
-              .filter((member) => member.isActive && member.inviteAccepted)
-              .map((member) => (
+            {acceptedTeamMembers.map((member) => (
                 <TeamMemberAvatar
                   key={member.id}
                   member={member}
@@ -598,7 +602,7 @@ function BookingWizard() {
               <p>
                 <span className="text-gray-500">{t.booking.step1}: </span>
                 <span className="font-medium">{selectedService.name}</span>
-                {barber.showPrices && (
+                {selectedService.priceDisplay && (
                   <span className="text-gray-500"> · {selectedService.priceDisplay}</span>
                 )}
               </p>
@@ -608,7 +612,7 @@ function BookingWizard() {
                   <span className="font-medium">
                     {selectedMemberId === 'anyone'
                       ? t.booking.anyone
-                      : barber.teamMembers.find((m) => m.id === selectedMemberId)?.name}
+                      : acceptedTeamMembers.find((m) => m.id === selectedMemberId)?.name}
                   </span>
                 </p>
               )}

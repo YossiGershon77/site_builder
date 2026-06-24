@@ -1,6 +1,7 @@
 'use client';
 
 import type { MockBarber, TeamMember } from '@/lib/mock';
+import { useLanguage } from '@/lib/i18n/context';
 import { Modal } from './Modal';
 
 interface InviteModalProps {
@@ -10,6 +11,7 @@ interface InviteModalProps {
 }
 
 export function InviteModal({ open, onClose, onSuccess }: InviteModalProps) {
+  const { t } = useLanguage();
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const form = new FormData(e.currentTarget);
@@ -22,14 +24,14 @@ export function InviteModal({ open, onClose, onSuccess }: InviteModalProps) {
 
   return (
     <Modal open={open} onClose={onClose}>
-      <h2 className="text-xl font-semibold text-[#111111]">Invite a team member</h2>
+      <h2 className="text-xl font-semibold text-[#111111]">{t.dashboard.team.inviteModalTitle}</h2>
       <p className="text-sm text-gray-500 mt-1">
-        They&apos;ll receive an email with a link to join your shop
+        {t.dashboard.team.inviteModalSub}
       </p>
 
       <form onSubmit={handleSubmit} className="mt-6 space-y-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">Email</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">{t.dashboard.team.email}</label>
           <input
             name="email"
             type="email"
@@ -38,7 +40,7 @@ export function InviteModal({ open, onClose, onSuccess }: InviteModalProps) {
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">Name</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">{t.dashboard.team.name}</label>
           <input
             name="name"
             type="text"
@@ -51,14 +53,14 @@ export function InviteModal({ open, onClose, onSuccess }: InviteModalProps) {
             type="submit"
             className="flex-1 py-3 bg-[#111111] text-white font-semibold rounded-xl hover:bg-gray-800 transition-colors"
           >
-            Send invite
+            {t.dashboard.team.sendInvite}
           </button>
           <button
             type="button"
             onClick={onClose}
             className="px-4 py-3 text-sm text-gray-500 hover:text-gray-700"
           >
-            Cancel
+            {t.dashboard.team.cancel}
           </button>
         </div>
       </form>
@@ -74,6 +76,7 @@ interface EditServicesModalProps {
 }
 
 export function EditServicesModal({ open, onClose, member, barber }: EditServicesModalProps) {
+  const { t } = useLanguage();
   if (!member) return null;
 
   const activeMember = member;
@@ -91,7 +94,9 @@ export function EditServicesModal({ open, onClose, member, barber }: EditService
 
   return (
     <Modal open={open} onClose={onClose} className="max-w-lg">
-      <h2 className="text-xl font-semibold text-[#111111]">Edit services for {activeMember.name}</h2>
+      <h2 className="text-xl font-semibold text-[#111111]">
+        {t.dashboard.team.editServicesFor.replace('{name}', activeMember.name)}
+      </h2>
 
       <form onSubmit={handleSave} className="mt-6 space-y-3 max-h-[50vh] overflow-y-auto">
         {barber.services.map((service) => (
@@ -108,7 +113,7 @@ export function EditServicesModal({ open, onClose, member, barber }: EditService
             <div className="flex-1 min-w-0">
               <p className="font-medium text-sm text-[#111111]">{service.name}</p>
               <p className="text-xs text-gray-400">
-                {service.durationMinutes} min · {service.priceDisplay}
+                {service.durationMinutes} {t.common.min} · {service.priceDisplay}
               </p>
             </div>
           </label>
@@ -119,10 +124,10 @@ export function EditServicesModal({ open, onClose, member, barber }: EditService
             type="submit"
             className="flex-1 py-3 bg-[#111111] text-white font-semibold rounded-xl hover:bg-gray-800 transition-colors"
           >
-            Save
+            {t.dashboard.team.save}
           </button>
           <button type="button" onClick={onClose} className="px-4 py-3 text-sm text-gray-500">
-            Cancel
+            {t.dashboard.team.cancel}
           </button>
         </div>
       </form>
@@ -138,11 +143,15 @@ interface EditHoursModalProps {
 }
 
 export function EditHoursModal({ open, onClose, member, barber }: EditHoursModalProps) {
+  const { locale, t } = useLanguage();
   if (!member) return null;
 
   const activeMember = member;
   const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-  const dayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const dayLabels =
+    locale === 'he'
+      ? ['א׳', 'ב׳', 'ג׳', 'ד׳', 'ה׳', 'ו׳', 'ש׳']
+      : ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   const memberDays = new Set(activeMember.workingDays ?? []);
 
   function handleSave(e: React.FormEvent<HTMLFormElement>) {
@@ -153,11 +162,13 @@ export function EditHoursModal({ open, onClose, member, barber }: EditHoursModal
 
   return (
     <Modal open={open} onClose={onClose} className="max-w-lg">
-      <h2 className="text-xl font-semibold text-[#111111]">Edit hours for {activeMember.name}</h2>
+      <h2 className="text-xl font-semibold text-[#111111]">
+        {t.dashboard.team.editHoursFor.replace('{name}', activeMember.name)}
+      </h2>
 
       <form onSubmit={handleSave} className="mt-6 space-y-5">
         <div>
-          <p className="text-sm font-medium text-gray-700 mb-2">Working days</p>
+          <p className="text-sm font-medium text-gray-700 mb-2">{t.dashboard.hours.workingDays}</p>
           <div className="flex flex-wrap gap-2">
             {days.map((day, idx) => {
               const shopClosed = !barber.workingDays.includes(day);
@@ -189,7 +200,7 @@ export function EditHoursModal({ open, onClose, member, barber }: EditHoursModal
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Start time</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">{t.dashboard.hours.startTime}</label>
             <input
               name="workStartTime"
               type="time"
@@ -200,7 +211,7 @@ export function EditHoursModal({ open, onClose, member, barber }: EditHoursModal
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">End time</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">{t.dashboard.hours.endTime}</label>
             <input
               name="workEndTime"
               type="time"
@@ -214,7 +225,7 @@ export function EditHoursModal({ open, onClose, member, barber }: EditHoursModal
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Break start</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">{t.dashboard.hours.breakStart}</label>
             <input
               name="breakStart"
               type="time"
@@ -223,7 +234,7 @@ export function EditHoursModal({ open, onClose, member, barber }: EditHoursModal
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Break end</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">{t.dashboard.hours.breakEnd}</label>
             <input
               name="breakEnd"
               type="time"
@@ -238,10 +249,10 @@ export function EditHoursModal({ open, onClose, member, barber }: EditHoursModal
             type="submit"
             className="flex-1 py-3 bg-[#111111] text-white font-semibold rounded-xl hover:bg-gray-800 transition-colors"
           >
-            Save
+            {t.dashboard.team.save}
           </button>
           <button type="button" onClick={onClose} className="px-4 py-3 text-sm text-gray-500">
-            Cancel
+            {t.dashboard.team.cancel}
           </button>
         </div>
       </form>
@@ -256,6 +267,7 @@ interface RemoveMemberDialogProps {
 }
 
 export function RemoveMemberDialog({ open, onClose, member }: RemoveMemberDialogProps) {
+  const { t } = useLanguage();
   if (!member) return null;
 
   const activeMember = member;
@@ -268,11 +280,10 @@ export function RemoveMemberDialog({ open, onClose, member }: RemoveMemberDialog
   return (
     <Modal open={open} onClose={onClose} className="max-w-sm">
       <h2 className="text-lg font-semibold text-[#111111]">
-        Remove {activeMember.name} from your team?
+        {t.dashboard.team.removeQuestion.replace('{name}', activeMember.name)}
       </h2>
       <p className="text-sm text-gray-500 mt-2">
-        Their past appointments will be preserved. They will lose access to the dashboard
-        immediately.
+        {t.dashboard.team.removeSub}
       </p>
       <div className="flex gap-3 mt-6">
         <button
@@ -280,14 +291,14 @@ export function RemoveMemberDialog({ open, onClose, member }: RemoveMemberDialog
           onClick={handleRemove}
           className="flex-1 py-3 bg-red-600 text-white font-semibold rounded-xl hover:bg-red-700 transition-colors"
         >
-          Remove
+          {t.dashboard.team.remove}
         </button>
         <button
           type="button"
           onClick={onClose}
           className="flex-1 py-3 border border-gray-200 text-gray-700 font-semibold rounded-xl hover:bg-gray-50 transition-colors"
         >
-          Cancel
+          {t.dashboard.team.cancel}
         </button>
       </div>
     </Modal>

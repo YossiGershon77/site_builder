@@ -2,11 +2,17 @@
 
 import { useState } from 'react';
 import { isSameDay } from '@/lib/dashboard/utils';
+import { useLanguage } from '@/lib/i18n/context';
 
 interface ScheduleCalendarProps {
   selectedDate: Date;
   onSelectDate: (date: Date) => void;
   workingDays: string[];
+  labels: {
+    today: string;
+    previousMonth: string;
+    nextMonth: string;
+  };
 }
 
 const DAY_INDEX: Record<string, number> = {
@@ -19,17 +25,32 @@ const DAY_INDEX: Record<string, number> = {
   Saturday: 6,
 };
 
-const MONTH_NAMES = [
+const MONTH_NAMES_EN = [
   'January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December',
 ];
+const MONTH_NAMES_HE = [
+  'ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני',
+  'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר',
+];
+const DAY_NAMES_EN = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+const DAY_NAMES_HE = ['א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ש'];
 
 function isWorkingDay(date: Date, workingDays: string[]): boolean {
   return workingDays.some((day) => DAY_INDEX[day] === date.getDay());
 }
 
-export function ScheduleCalendar({ selectedDate, onSelectDate, workingDays }: ScheduleCalendarProps) {
+export function ScheduleCalendar({
+  selectedDate,
+  onSelectDate,
+  workingDays,
+  labels,
+}: ScheduleCalendarProps) {
+  const { locale } = useLanguage();
   const today = new Date();
+  const monthNames = locale === 'he' ? MONTH_NAMES_HE : MONTH_NAMES_EN;
+  const dayNames = locale === 'he' ? DAY_NAMES_HE : DAY_NAMES_EN;
+
   today.setHours(0, 0, 0, 0);
 
   const [viewMonth, setViewMonth] = useState(
@@ -57,7 +78,7 @@ export function ScheduleCalendar({ selectedDate, onSelectDate, workingDays }: Sc
     <div className="bg-white rounded-xl border border-gray-200 p-4 lg:sticky lg:top-6">
       <div className="flex items-center justify-between mb-4">
         <h3 className="font-semibold text-[#111111] text-sm">
-          {MONTH_NAMES[month]} {year}
+          {monthNames[month]} {year}
         </h3>
         <div className="flex gap-1">
           <button
@@ -65,7 +86,7 @@ export function ScheduleCalendar({ selectedDate, onSelectDate, workingDays }: Sc
             onClick={() => shiftMonth(-1)}
             disabled={year === today.getFullYear() && month === today.getMonth()}
             className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 disabled:opacity-30 disabled:cursor-not-allowed"
-            aria-label="Previous month"
+            aria-label={labels.previousMonth}
           >
             ←
           </button>
@@ -73,7 +94,7 @@ export function ScheduleCalendar({ selectedDate, onSelectDate, workingDays }: Sc
             type="button"
             onClick={() => shiftMonth(1)}
             className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400"
-            aria-label="Next month"
+            aria-label={labels.nextMonth}
           >
             →
           </button>
@@ -81,7 +102,7 @@ export function ScheduleCalendar({ selectedDate, onSelectDate, workingDays }: Sc
       </div>
 
       <div className="grid grid-cols-7 mb-1">
-        {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((d) => (
+        {dayNames.map((d) => (
           <div key={d} className="text-center text-xs text-gray-400 py-1 font-medium">
             {d}
           </div>
@@ -127,7 +148,7 @@ export function ScheduleCalendar({ selectedDate, onSelectDate, workingDays }: Sc
         onClick={() => onSelectDate(new Date(today))}
         className="w-full mt-4 py-2 text-sm font-medium text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
       >
-        Today
+        {labels.today}
       </button>
     </div>
   );

@@ -20,17 +20,11 @@ export const DEFAULT_SERVICE_PRICES: Record<string, number> = {
   'beard-trim': 50,
   'beard-razor-shave': 80,
   'beard-mustache': 30,
-  'beard-eyebrows': 25,
   'combo-cut-beard': 120,
-  'combo-cut-shave': 150,
-  'combo-full': 200,
   'treat-wash-style': 40,
   'treat-color': 150,
   'treat-keratin': 350,
-  'treat-keratin-express': 250,
-  'treat-scalp': 80,
   'extra-nose-ear': 30,
-  'extra-hot-towel': 40,
   'extra-japanese': 500,
 };
 

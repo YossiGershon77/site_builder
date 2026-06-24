@@ -4,7 +4,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 
 interface GalleryStripProps {
-  images: { id: string; url: string }[];
+  images: readonly { id: string; url: string }[];
   linkTo?: string;
 }
 

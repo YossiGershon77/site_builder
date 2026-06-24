@@ -5,27 +5,30 @@ import Link from 'next/link';
 import { useLanguage } from '@/lib/i18n/context';
 import { TeamMemberCard } from '@/components/TeamMemberCard';
 
-function formatWorkingDays(days: string[], locale: 'he' | 'en'): string {
+function formatWorkingDays(days: string[]): string {
   if (days.length === 0) return '';
 
-  if (locale === 'he') {
-    const hebrewDays: Record<string, string> = {
-      Sunday: 'א',
-      Monday: 'ב',
-      Tuesday: 'ג',
-      Wednesday: 'ד',
-      Thursday: 'ה',
-      Friday: 'ו',
-      Saturday: 'ש',
-    };
-    const first = hebrewDays[days[0]] ?? days[0].substring(0, 3);
-    const last = hebrewDays[days[days.length - 1]] ?? days[days.length - 1].substring(0, 3);
-    return first === last ? first : `${first}–${last}`;
+  const order = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const labels: Record<string, string> = {
+    Sunday: 'Sun',
+    Monday: 'Mon',
+    Tuesday: 'Tue',
+    Wednesday: 'Wed',
+    Thursday: 'Thu',
+    Friday: 'Fri',
+    Saturday: 'Sat',
+  };
+
+  const sorted = [...days].sort((a, b) => order.indexOf(a) - order.indexOf(b));
+  const isConsecutive = sorted.every(
+    (day, index) => index === 0 || order.indexOf(day) === order.indexOf(sorted[index - 1]) + 1,
+  );
+
+  if (isConsecutive && sorted.length > 1) {
+    return `${labels[sorted[0]]}–${labels[sorted[sorted.length - 1]]}`;
   }
 
-  const first = days[0].substring(0, 3);
-  const last = days[days.length - 1].substring(0, 3);
-  return first === last ? first : `${first}–${last}`;
+  return sorted.map((day) => labels[day] ?? day.slice(0, 3)).join(', ');
 }
 
 function MapPinIcon() {
@@ -51,17 +54,39 @@ function MapPinIcon() {
   );
 }
 
+function ClockIcon() {
+  return (
+    <svg
+      className="w-4 h-4 flex-shrink-0"
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth={1.8}
+      aria-hidden
+    >
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+  );
+}
+
+function getInitials(name: string) {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '?';
+  if (parts.length === 1) return parts[0][0]?.toUpperCase() ?? '?';
+  return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+}
+
 export default function AboutPage() {
-  const { t, locale } = useLanguage();
+  const { t } = useLanguage();
   const barber = t.barber;
+  const acceptedTeamMembers = barber.teamMembers.filter((member) => member.inviteAccepted);
 
-  const initials = barber.name
-    .split(' ')
-    .map((n) => n[0])
-    .join('');
-
-  const workDays = formatWorkingDays(barber.workingDays, locale);
-  const workHours = `${workDays}, ${barber.workStartTime}–${barber.workEndTime}`;
+  const workDays = formatWorkingDays(barber.workingDays);
+  const workHours =
+    workDays && barber.workStartTime && barber.workEndTime
+      ? `${workDays}, ${barber.workStartTime}–${barber.workEndTime}`
+      : '';
 
   return (
     <div className="py-12 px-4 max-w-6xl mx-auto">
@@ -79,7 +104,9 @@ export default function AboutPage() {
               />
             ) : (
               <div className="w-full h-full flex items-center justify-center">
-                <span className="text-4xl font-semibold text-gray-400">{initials}</span>
+                <span className="text-4xl font-semibold text-gray-400">
+                  {getInitials(barber.name)}
+                </span>
               </div>
             )}
           </div>
@@ -95,12 +122,26 @@ export default function AboutPage() {
 
           <div className="flex items-center gap-1.5 mt-1 text-gray-500">
             <MapPinIcon />
-            <span className="text-sm">{barber.neighborhood}</span>
+            <span className={`text-sm ${barber.address ? '' : 'text-gray-400'}`}>
+              {barber.address || t.common.locationNotSet}
+            </span>
           </div>
 
-          <p className="text-gray-600 leading-relaxed mt-4">{barber.bio}</p>
+          {barber.bio && (
+            <p className="text-gray-600 leading-relaxed mt-4">{barber.bio}</p>
+          )}
 
-          <p className="text-sm text-gray-400 mt-4">🗓 {workHours}</p>
+          {workHours && (
+            <div className="flex items-start gap-2 text-sm text-gray-400 mt-4">
+              <ClockIcon />
+              <div>
+                <p>{workHours}</p>
+                {barber.breakStart && barber.breakEnd && (
+                  <p>Break: {barber.breakStart}–{barber.breakEnd}</p>
+                )}
+              </div>
+            </div>
+          )}
 
           <Link
             href="/booking"
@@ -111,13 +152,13 @@ export default function AboutPage() {
         </div>
       </div>
 
-      {barber.teamMembers.length > 0 && (
+      {acceptedTeamMembers.length > 0 && (
         <section className="mt-20 pt-12 border-t border-gray-100">
           <h2 className="text-2xl font-semibold tracking-tight text-[#111111] mb-8">
             {t.about.theTeam}
           </h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-8">
-            {barber.teamMembers.map((member) => (
+            {acceptedTeamMembers.map((member) => (
               <TeamMemberCard key={member.id} member={member} variant="circle" />
             ))}
           </div>

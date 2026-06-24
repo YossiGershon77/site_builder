@@ -60,20 +60,21 @@ function generateDaySlots(
   bufferMinutes: number,
   workStart: string,
   workEnd: string,
-  breakStart: string,
-  breakEnd: string,
+  breakStart: string | null,
+  breakEnd: string | null,
 ): string[] {
   const slots: string[] = [];
   const start = timeToMinutes(workStart);
   const end = timeToMinutes(workEnd);
-  const breakFrom = timeToMinutes(breakStart);
-  const breakTo = timeToMinutes(breakEnd);
+  const hasBreak = !!breakStart && !!breakEnd;
+  const breakFrom = hasBreak ? timeToMinutes(breakStart) : 0;
+  const breakTo = hasBreak ? timeToMinutes(breakEnd) : 0;
   const step = durationMinutes + bufferMinutes;
 
   let current = start;
   while (current + durationMinutes <= end) {
     const slotEnd = current + durationMinutes;
-    if (current < breakTo && slotEnd > breakFrom) {
+    if (hasBreak && current < breakTo && slotEnd > breakFrom) {
       current = breakTo;
       continue;
     }
@@ -127,10 +128,11 @@ export function getAvailableSlots(
 
   let qualifiedMembers = getQualifiedMembers(barber, serviceId, memberId);
   qualifiedMembers = qualifiedMembers.filter((member) => !isMemberOff(member.id, date));
+  const isSoloBarber = barber.teamMembers.filter((m) => m.isActive && m.inviteAccepted).length === 0;
 
   if (memberId !== 'anyone' && isMemberOff(memberId, date)) return [];
 
-  if (qualifiedMembers.length === 0) return [];
+  if (qualifiedMembers.length === 0 && !isSoloBarber) return [];
 
   const dateKey = formatDateKey(date);
   const allSlots = generateDaySlots(
@@ -151,6 +153,7 @@ export function getAvailableSlots(
 
   return allSlots.filter((slot) => {
     if (isToday && timeToMinutes(slot) <= nowMinutes) return false;
+    if (isSoloBarber) return true;
 
     return qualifiedMembers.some(
       (member) => !isSlotBooked(member.id, dateKey, slot, durationMinutes, bookings),

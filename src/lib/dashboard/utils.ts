@@ -11,22 +11,37 @@ export const DAY_LABELS: Record<string, string> = {
   Friday: 'Fri',
   Saturday: 'Sat',
 };
+export const DAY_LABELS_HE: Record<string, string> = {
+  Sunday: 'א׳',
+  Monday: 'ב׳',
+  Tuesday: 'ג׳',
+  Wednesday: 'ד׳',
+  Thursday: 'ה׳',
+  Friday: 'ו׳',
+  Saturday: 'ש׳',
+};
 
 export function formatTime(date: Date): string {
   return date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
 }
 
-export function formatDateHeading(date: Date): string {
+export function formatDateHeading(date: Date, locale: 'he' | 'en' = 'en'): string {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const target = new Date(date);
   target.setHours(0, 0, 0, 0);
 
+  const localeCode = locale === 'he' ? 'he-IL' : 'en-US';
   if (target.getTime() === today.getTime()) {
-    return `Today (${date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })})`;
+    const formatted = date.toLocaleDateString(localeCode, {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+    });
+    return locale === 'he' ? `היום (${formatted})` : `Today (${formatted})`;
   }
 
-  return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+  return date.toLocaleDateString(localeCode, { weekday: 'short', month: 'short', day: 'numeric' });
 }
 
 export function isSameDay(a: Date, b: Date): boolean {
@@ -87,15 +102,19 @@ export function getNextAvailableSlot(
   return null;
 }
 
-export function formatWorkingDaysSummary(days: string[] | null): string {
-  if (!days || days.length === 0) return 'No days set';
+export function formatWorkingDaysSummary(
+  days: string[] | null,
+  labels: Record<string, string> = DAY_LABELS,
+  emptyLabel = 'No days set',
+): string {
+  if (!days || days.length === 0) return emptyLabel;
 
   const indices = days
     .map((day) => DAY_ORDER.indexOf(day as (typeof DAY_ORDER)[number]))
     .filter((i) => i >= 0)
     .sort((a, b) => a - b);
 
-  if (indices.length === 0) return 'No days set';
+  if (indices.length === 0) return emptyLabel;
 
   const ranges: string[] = [];
   let start = indices[0];
@@ -105,26 +124,40 @@ export function formatWorkingDaysSummary(days: string[] | null): string {
     if (indices[i] === end + 1) {
       end = indices[i];
     } else {
-      ranges.push(formatDayRange(start, end));
+    ranges.push(formatDayRange(start, end, labels));
       start = indices[i];
       end = indices[i];
     }
   }
-  ranges.push(formatDayRange(start, end));
+  ranges.push(formatDayRange(start, end, labels));
   return ranges.join(', ');
 }
 
-function formatDayRange(start: number, end: number): string {
-  if (start === end) return DAY_LABELS[DAY_ORDER[start]];
-  return `${DAY_LABELS[DAY_ORDER[start]]}–${DAY_LABELS[DAY_ORDER[end]]}`;
+function formatDayRange(start: number, end: number, labels: Record<string, string>): string {
+  if (start === end) return labels[DAY_ORDER[start]];
+  return `${labels[DAY_ORDER[start]]}–${labels[DAY_ORDER[end]]}`;
 }
 
-export function formatHoursSummary(member: TeamMember): string {
-  if (!member.workingDays || !member.workStartTime || !member.workEndTime) return 'Hours not set';
-  const days = formatWorkingDaysSummary(member.workingDays);
+export function formatHoursSummary(
+  member: TeamMember,
+  options?: {
+    dayLabels?: Record<string, string>;
+    noDaysSet?: string;
+    hoursNotSet?: string;
+    breakLabel?: string;
+  },
+): string {
+  if (!member.workingDays || !member.workStartTime || !member.workEndTime) {
+    return options?.hoursNotSet ?? 'Hours not set';
+  }
+  const days = formatWorkingDaysSummary(
+    member.workingDays,
+    options?.dayLabels ?? DAY_LABELS,
+    options?.noDaysSet ?? 'No days set',
+  );
   let summary = `${days}, ${member.workStartTime}–${member.workEndTime}`;
   if (member.breakStart && member.breakEnd) {
-    summary += `, break ${member.breakStart}–${member.breakEnd}`;
+    summary += `, ${options?.breakLabel ?? 'break'} ${member.breakStart}–${member.breakEnd}`;
   }
   return summary;
 }

@@ -4,6 +4,8 @@ import {
   type Locale,
 } from '@/lib/i18n/translations';
 import { dateKeyOffset, type DayOff } from '@/lib/days-off/types';
+import { SERVICE_BANK, type ServiceCategory } from '@/lib/service-bank';
+import { DEFAULT_SERVICE_PRICES } from '@/lib/setup/constants';
 
 export type UserRole = 'OWNER' | 'TEAM_MEMBER';
 export type AppointmentStatus = 'CONFIRMED' | 'PENDING' | 'CANCELLED';
@@ -77,14 +79,15 @@ export const initialDaysOff: DayOff[] = [
 
 export interface BarberService {
   id: string;
-  bankId?: string;
+  bankId: string | null;
   name: string;
   nameHe?: string;
   description: string;
   descriptionHe?: string;
   imageUrl: string | null;
-  priceDisplay: string;
+  priceDisplay: string | null;
   durationMinutes: number;
+  showDuration: boolean;
   displayOrder: number;
   isActive: boolean;
 }
@@ -150,18 +153,22 @@ export interface MockBarber {
   name: string;
   slug: string;
   tagline: string;
+  address: string;
   neighborhood: string;
   bio: string;
   whatsappNumber: string;
-  googleReviewsUrl: string;
-  heroImageUrl: string;
-  profileImageUrl: string;
+  instagramUrl: string | null;
+  facebookUrl: string | null;
+  googleMapsUrl: string | null;
+  googleReviewsUrl: string | null;
+  heroImageUrl: string | null;
+  profileImageUrl: string | null;
   isPublished: boolean;
   workingDays: string[];
   workStartTime: string;
   workEndTime: string;
-  breakStart: string;
-  breakEnd: string;
+  breakStart: string | null;
+  breakEnd: string | null;
   bufferMinutes: number;
   showPrices: boolean;
   services: readonly BarberService[];
@@ -181,6 +188,38 @@ function apptTime(dayOffset: number, time: string): Date {
 
 const baseBarber = translations[defaultLocale].barber;
 
+function buildDefaultSelectedServices(): SetupSelectedService[] {
+  return SERVICE_BANK.map((service) => ({
+    bankId: service.id,
+    customId: undefined,
+    name: service.name,
+    nameHe: service.nameHe,
+    category: service.category,
+    description: null,
+    price: DEFAULT_SERVICE_PRICES[service.id] ?? 50,
+    durationMinutes: service.defaultDurationMinutes,
+    imageUrl: service.defaultImageUrl,
+    useDefaultImage: true,
+    showPrice: true,
+    showDuration: true,
+  }));
+}
+
+function buildTeamServiceEntries(
+  services: readonly SetupSelectedService[],
+): TeamMemberService[] {
+  return services.map((service, index) => ({
+    service: {
+      id: `s${index + 1}`,
+      name: service.name,
+    },
+  }));
+}
+
+const defaultSelectedServices = buildDefaultSelectedServices();
+const mockSelectedServices = defaultSelectedServices;
+const allMockTeamServices = buildTeamServiceEntries(mockSelectedServices);
+
 const mockTeamMembers: TeamMember[] = [
   {
     id: 't1',
@@ -196,10 +235,7 @@ const mockTeamMembers: TeamMember[] = [
     workEndTime: '19:00',
     breakStart: '13:00',
     breakEnd: '14:00',
-    services: [
-      { service: { id: 's1', name: 'Haircut' } },
-      { service: { id: 's2', name: 'Fade' } },
-    ],
+    services: allMockTeamServices,
   },
   {
     id: 't2',
@@ -215,10 +251,7 @@ const mockTeamMembers: TeamMember[] = [
     workEndTime: '18:00',
     breakStart: null,
     breakEnd: null,
-    services: [
-      { service: { id: 's1', name: 'Haircut' } },
-      { service: { id: 's3', name: 'Beard Trim' } },
-    ],
+    services: allMockTeamServices,
   },
   {
     id: 't3',
@@ -234,10 +267,7 @@ const mockTeamMembers: TeamMember[] = [
     workEndTime: '17:00',
     breakStart: '13:00',
     breakEnd: '14:00',
-    services: [
-      { service: { id: 's2', name: 'Fade' } },
-      { service: { id: 's4', name: 'Kids Cut' } },
-    ],
+    services: allMockTeamServices,
   },
   {
     id: 't4',
@@ -253,11 +283,7 @@ const mockTeamMembers: TeamMember[] = [
     workEndTime: '19:00',
     breakStart: null,
     breakEnd: null,
-    services: [
-      { service: { id: 's1', name: 'Haircut' } },
-      { service: { id: 's3', name: 'Beard Trim' } },
-      { service: { id: 's4', name: 'Kids Cut' } },
-    ],
+    services: allMockTeamServices,
   },
 ];
 
@@ -387,114 +413,22 @@ function buildAppointments(): Appointment[] {
   ];
 }
 
-const mockBarberServices: BarberService[] = [
-  {
-    id: 's1',
-    bankId: 'cuts-haircut',
-    name: 'Haircut',
-    nameHe: 'תספורת',
-    description: 'Classic cut tailored to your face shape and style.',
-    descriptionHe: 'תספורת קלאסית מותאמת לצורת הפנים ולסגנון שלך.',
-    imageUrl:
-      'https://images.unsplash.com/photo-1599351431202-1e0f0137899a?w=600&q=80',
-    priceDisplay: '₪80',
-    durationMinutes: 45,
-    displayOrder: 0,
-    isActive: true,
-  },
-  {
-    id: 's2',
-    bankId: 'cuts-fade',
-    name: 'Fade',
-    nameHe: 'פייד',
-    description: 'Skin to length, seamless gradient. Our most requested service.',
-    descriptionHe: 'מעורר עור ועד אורך, מעבר חלק. השירות הכי מבוקש.',
-    imageUrl:
-      'https://images.unsplash.com/photo-1622286342621-4bd786c2447c?w=600&q=80',
-    priceDisplay: '₪100',
-    durationMinutes: 60,
-    displayOrder: 1,
-    isActive: true,
-  },
-  {
-    id: 's3',
-    bankId: 'beard-trim',
-    name: 'Beard Trim',
-    nameHe: 'עיצוב זקן',
-    description: 'Shape, line up, and define. Pairs well with any cut.',
-    descriptionHe: 'עיצוב, קו ודיוק. משתלב מצוין עם כל תספורת.',
-    imageUrl:
-      'https://images.unsplash.com/photo-1621605815971-fbc98d665033?w=600&q=80',
-    priceDisplay: '₪50',
-    durationMinutes: 30,
-    displayOrder: 2,
-    isActive: true,
-  },
-  {
-    id: 's4',
-    bankId: 'cuts-kids',
-    name: 'Kids Cut',
-    nameHe: 'תספורת ילדים',
-    description: 'Patient and careful. For the young ones.',
-    descriptionHe: 'בסבלנות ובזהירות. לקטנטנים.',
-    imageUrl:
-      'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=600&q=80',
-    priceDisplay: '₪60',
-    durationMinutes: 30,
-    displayOrder: 3,
-    isActive: true,
-  },
-  {
-    id: 's5',
-    bankId: 'combo-cut-beard',
-    name: 'Haircut + Beard Trim',
-    nameHe: 'תספורת + זקן',
-    description: 'The classic combo. Cut and beard in one session.',
-    descriptionHe: 'הקומבו הקלאסי. תספורת וזקן בביקור אחד.',
-    imageUrl: null,
-    priceDisplay: '₪120',
-    durationMinutes: 60,
-    displayOrder: 4,
-    isActive: true,
-  },
-  {
-    id: 's6',
-    bankId: 'treat-keratin',
-    name: 'Keratin Treatment',
-    nameHe: 'החלקת קרטין',
-    description: 'Smooth, frizz-free hair for months. Full keratin treatment.',
-    descriptionHe: 'שיער חלק וללא פריז למשך חודשים. טיפול קרטין מלא.',
-    imageUrl: null,
-    priceDisplay: '₪350',
-    durationMinutes: 150,
-    displayOrder: 5,
-    isActive: true,
-  },
-];
-
-export const mockBarber: MockBarber = {
-  ...baseBarber,
-  services: mockBarberServices,
-  teamMembers: mockTeamMembers,
-  appointments: buildAppointments(),
-};
-
-export function getBarberServiceByBankId(
-  bankId: string,
-): BarberService | undefined {
-  return mockBarber.services.find(
-    (service) => service.bankId === bankId && service.isActive,
-  );
-}
-
 export type SetupStatus = 'IN_PROGRESS' | 'COMPLETED';
 
 export type SetupSelectedService = {
-  id: string;
+  bankId: string | null;
+  customId?: string;
+  name: string;
+  nameHe?: string;
+  category?: ServiceCategory;
+  description: string | null;
   price: number;
-  duration: number;
-  imageUrl: string;
+  durationMinutes: number;
+  imageUrl: string | null;
   useDefaultImage: boolean;
+  showPrice: boolean;
+  showDuration: boolean;
+  isCustom?: boolean;
 };
 
 export type SetupInvite = {
@@ -511,6 +445,11 @@ export type SetupGalleryPhoto = {
 
 export type SetupData = {
   details: {
+    name: string;
+    tagline: string;
+    whatsappNumber: string;
+    instagramUrl: string;
+    facebookUrl: string;
     subdomain: string;
     googleMapsUrl: string;
     address: string;
@@ -548,30 +487,114 @@ export const mockSetupSession = {
   expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
   data: {
     details: {
-      subdomain: '',
-      googleMapsUrl: '',
-      address: '',
-      about: '',
+      name: 'Eduardo Peretz',
+      tagline: 'Old school cuts, new school precision',
+      whatsappNumber: '+972501234567',
+      instagramUrl: 'https://instagram.com/eduardo.barber',
+      facebookUrl: '',
+      subdomain: 'eduardo',
+      googleMapsUrl: 'https://maps.google.com/?cid=123456',
+      address: 'Florentin 42, Tel Aviv',
+      about: '25 years behind the chair. Walk-ins welcome, regulars preferred.',
     },
     services: {
-      selectedServices: [] as SetupSelectedService[],
+      selectedServices: mockSelectedServices,
       globalShowPrices: true,
       globalShowDurations: true,
     },
     hours: {
-      workingDays: [] as string[],
-      workStartTime: '',
-      workEndTime: '',
-      breakStart: '',
-      breakEnd: '',
-      hasBreak: false,
+      workingDays: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday'] as string[],
+      workStartTime: '09:00',
+      workEndTime: '19:00',
+      breakStart: '13:00',
+      breakEnd: '14:00',
+      hasBreak: true,
     },
     gallery: {
-      placePhotos: [] as SetupGalleryPhoto[],
-      profilePhoto: null as string | null,
+      // TODO: Replace with real gallery images
+      placePhotos: baseBarber.galleryImages.map((image) => ({
+        id: image.id,
+        url: image.url,
+        isFeatured: image.isFeatured,
+      })) as SetupGalleryPhoto[],
+      profilePhoto: baseBarber.profileImageUrl,
     },
     staff: {
       invites: [] as SetupInvite[],
     },
   } satisfies SetupData,
 };
+
+export function buildBarberFromSetup(setup: SetupData): MockBarber {
+  return {
+    id: '1',
+    name: setup.details.name,
+    slug: setup.details.subdomain,
+    tagline: setup.details.tagline || '',
+    whatsappNumber: setup.details.whatsappNumber,
+    instagramUrl: setup.details.instagramUrl || null,
+    facebookUrl: setup.details.facebookUrl || null,
+    address: setup.details.address,
+    neighborhood: setup.details.address,
+    bio: setup.details.about || '',
+    googleMapsUrl: setup.details.googleMapsUrl || null,
+    googleReviewsUrl: setup.details.googleMapsUrl || null,
+    heroImageUrl: setup.gallery.placePhotos[0]?.url || null,
+    profileImageUrl: setup.gallery.profilePhoto || null,
+    isPublished: true,
+    workingDays: setup.hours.workingDays,
+    workStartTime: setup.hours.workStartTime,
+    workEndTime: setup.hours.workEndTime,
+    breakStart: setup.hours.breakStart || null,
+    breakEnd: setup.hours.breakEnd || null,
+    bufferMinutes: 10,
+    showPrices: setup.services.globalShowPrices,
+    services: setup.services.selectedServices.map((service, index) => {
+      const bankItem = SERVICE_BANK.find((item) => item.id === service.bankId);
+      return {
+        id: service.customId ?? `s${index + 1}`,
+        bankId: service.bankId,
+        name: service.name || bankItem?.name || '',
+        nameHe: service.nameHe || bankItem?.nameHe || service.name || '',
+        description: service.description?.trim() || bankItem?.description || '',
+        descriptionHe: bankItem?.descriptionHe,
+        imageUrl: service.imageUrl || bankItem?.defaultImageUrl || null,
+        priceDisplay:
+          service.showPrice && service.price ? `₪${service.price}` : null,
+        durationMinutes:
+          service.durationMinutes || bankItem?.defaultDurationMinutes || 30,
+        showDuration: service.showDuration,
+        displayOrder: index,
+        isActive: true,
+      };
+    }),
+    galleryImages: setup.gallery.placePhotos.map((photo, index) => ({
+      id: `g${index + 1}`,
+      url: photo.url,
+      displayOrder: index,
+      isFeatured: index === 0,
+    })),
+    teamMembers: setup.staff.invites.map((invite, index) => ({
+      id: `t${index + 1}`,
+      name: invite.name,
+      email: invite.email,
+      profileImageUrl: null,
+      isActive: false,
+      inviteAccepted: false,
+      services: [],
+    })),
+    appointments: buildAppointments(),
+  };
+}
+
+// The public site reads from this object.
+// It's built from the same data the wizard saves.
+export const mockBarber = buildBarberFromSetup(mockSetupSession.data);
+
+export function getBarberServiceByBankId(
+  bankId: string,
+): BarberService | undefined {
+  return mockBarber.services.find(
+    (service) => service.bankId === bankId && service.isActive,
+  );
+}

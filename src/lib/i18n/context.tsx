@@ -8,7 +8,7 @@ import {
   useMemo,
   useState,
 } from 'react';
-import { localizeBarberServices, mockBarber } from '@/lib/mock';
+import { localizeBarberServices, mockBarber, type MockBarber } from '@/lib/mock';
 import {
   defaultLocale,
   translations,
@@ -20,7 +20,7 @@ const STORAGE_KEY = 'locale';
 
 interface LanguageContextValue {
   locale: Locale;
-  t: Translations;
+  t: Omit<Translations, 'barber'> & { barber: MockBarber };
   setLocale: (locale: Locale) => void;
   toggleLocale: () => void;
 }
@@ -63,10 +63,10 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
       t: {
         ...base,
         barber: {
-          ...base.barber,
+          ...mockBarber,
           services: localizeBarberServices(mockBarber.services, locale),
         },
-      } as unknown as Translations,
+      },
       setLocale,
       toggleLocale,
     };

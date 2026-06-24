@@ -7,8 +7,8 @@ import { formatTimeForLocale } from '@/lib/setup/time-format';
 interface TimeRangeInputProps {
   startLabel: string;
   endLabel: string;
-  startValue: string;
-  endValue: string;
+  startValue: string | null;
+  endValue: string | null;
   onStartChange: (value: string) => void;
   onEndChange: (value: string) => void;
   error?: string | null;
@@ -48,7 +48,7 @@ export function TimeRangeInput({
         <div>
           <label className="block text-sm font-medium text-[#111111] mb-1.5">{startLabel}</label>
           <select
-            value={startValue}
+            value={startValue ?? ''}
             onChange={(e) => onStartChange(e.target.value)}
             disabled={disabled}
             title={disabled ? disabledTitle : undefined}
@@ -67,7 +67,7 @@ export function TimeRangeInput({
         <div>
           <label className="block text-sm font-medium text-[#111111] mb-1.5">{endLabel}</label>
           <select
-            value={endValue}
+            value={endValue ?? ''}
             onChange={(e) => onEndChange(e.target.value)}
             disabled={disabled}
             title={disabled ? disabledTitle : undefined}

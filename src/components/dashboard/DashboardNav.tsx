@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useDashboard } from '@/lib/dashboard/context';
 import { clearMockAuthenticatedUser } from '@/lib/auth/mock-auth';
+import { useLanguage } from '@/lib/i18n/context';
 
 function NavIcon({ name }: { name: string }) {
   const icons: Record<string, React.ReactNode> = {
@@ -60,12 +61,17 @@ export function DashboardSidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { user, barber } = useDashboard();
+  const { t } = useLanguage();
 
   const navItems: NavItem[] = [
-    { href: '/dashboard', label: 'Schedule', icon: 'schedule' },
-    { href: '/dashboard/my-hours', label: 'My Hours', icon: 'hours' },
-    { href: '/dashboard/my-services', label: 'My Services', icon: 'services', staffOnly: true },
-    { href: '/dashboard/team', label: 'Team', icon: 'team', ownerOnly: true },
+    { href: '/dashboard', label: t.dashboard.nav.schedule, icon: 'schedule' },
+    { href: '/dashboard/my-hours', label: t.dashboard.nav.myHours, icon: 'hours' },
+    {
+      href: '/dashboard/my-services',
+      label: user.role === 'OWNER' ? t.dashboard.nav.services : t.dashboard.nav.myServices,
+      icon: 'services',
+    },
+    { href: '/dashboard/team', label: t.dashboard.nav.team, icon: 'team', ownerOnly: true },
   ];
 
   const visibleItems = navItems.filter((item) => {
@@ -107,7 +113,7 @@ export function DashboardSidebar() {
           className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-600 hover:bg-gray-50 hover:text-[#111111] transition-colors"
         >
           <NavIcon name="external" />
-          Back to site
+          {t.dashboard.nav.backToSite}
         </Link>
         <button
           type="button"
@@ -118,7 +124,7 @@ export function DashboardSidebar() {
           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-600 hover:bg-gray-50 hover:text-[#111111] transition-colors"
         >
           <NavIcon name="logout" />
-          Sign out
+          {t.dashboard.nav.signOut}
         </button>
       </nav>
     </aside>
@@ -129,25 +135,38 @@ export function DashboardMobileNav() {
   const pathname = usePathname();
   const router = useRouter();
   const { user } = useDashboard();
+  const { t } = useLanguage();
   const [moreOpen, setMoreOpen] = useState(false);
+  const [moreVisible, setMoreVisible] = useState(false);
+  const [renderMore, setRenderMore] = useState(false);
+
+  useEffect(() => {
+    if (moreOpen) {
+      setRenderMore(true);
+      requestAnimationFrame(() => setMoreVisible(true));
+      return;
+    }
+
+    setMoreVisible(false);
+    const timeout = window.setTimeout(() => setRenderMore(false), 220);
+    return () => window.clearTimeout(timeout);
+  }, [moreOpen]);
 
   const primaryTabs: NavItem[] = [
-    { href: '/dashboard', label: 'Schedule', icon: 'schedule' },
-    { href: '/dashboard/my-hours', label: 'Hours', icon: 'hours' },
-    user.role === 'OWNER'
-      ? { href: '/dashboard/team', label: 'Team', icon: 'team' }
-      : { href: '/dashboard/my-services', label: 'Services', icon: 'services' },
+    { href: '/dashboard', label: t.dashboard.nav.schedule, icon: 'schedule' },
+    { href: '/dashboard/my-hours', label: t.dashboard.nav.myHours, icon: 'hours' },
+    { href: '/dashboard/my-services', label: t.dashboard.nav.services, icon: 'services' },
   ];
 
   const moreItems: NavItem[] = [
     ...(user.role === 'TEAM_MEMBER'
-      ? [{ href: '/dashboard/my-services', label: 'My Services', icon: 'services' }]
+      ? [{ href: '/dashboard/my-services', label: t.dashboard.nav.myServices, icon: 'services' }]
       : []),
     ...(user.role === 'OWNER'
-      ? [{ href: '/dashboard/team', label: 'Team', icon: 'team' }]
+      ? [{ href: '/dashboard/team', label: t.dashboard.nav.team, icon: 'team' }]
       : []),
-    { href: '/', label: 'Back to site', icon: 'external' },
-    { href: '/login', label: 'Sign out', icon: 'logout' },
+    { href: '/', label: t.dashboard.nav.backToSite, icon: 'external' },
+    { href: '/login', label: t.dashboard.nav.signOut, icon: 'logout' },
   ].filter(
     (item, idx, arr) => arr.findIndex((other) => other.href === item.href) === idx,
   ) as NavItem[];
@@ -181,27 +200,33 @@ export function DashboardMobileNav() {
             className="flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-lg min-w-[64px] text-gray-400"
           >
             <NavIcon name="more" />
-            <span className="text-[10px] font-medium">More</span>
+            <span className="text-[10px] font-medium">{t.dashboard.nav.more}</span>
           </button>
         </div>
       </nav>
 
-      {moreOpen && (
+      {renderMore && (
         <div className="md:hidden fixed inset-0 z-50">
           <button
             type="button"
-            className="absolute inset-0 bg-black/40"
+            className={`absolute inset-0 bg-black/40 transition-opacity duration-200 ${
+              moreVisible ? 'opacity-100' : 'opacity-0'
+            }`}
             aria-label="Close menu"
             onClick={() => setMoreOpen(false)}
           />
-          <div className="absolute bottom-0 inset-x-0 bg-white rounded-t-2xl p-4 pb-8 space-y-1">
+          <div
+            className={`absolute bottom-0 inset-x-0 bg-white rounded-t-2xl p-4 pb-8 space-y-1 transition-transform duration-200 ease-out ${
+              moreVisible ? 'translate-y-0' : 'translate-y-full'
+            }`}
+          >
             {filteredMore.map((item) => (
               <button
                 key={item.label}
                 type="button"
                 onClick={() => {
                   setMoreOpen(false);
-                  if (item.label === 'Sign out') {
+                  if (item.href === '/login') {
                     clearMockAuthenticatedUser();
                     router.push('/login');
                   } else router.push(item.href);

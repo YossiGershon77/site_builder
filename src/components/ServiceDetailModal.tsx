@@ -4,7 +4,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Modal } from '@/components/dashboard/Modal';
 import type { BarberService } from '@/lib/mock';
-import type { ServiceBankItem } from '@/lib/service-bank';
+import { FALLBACK_SERVICE_IMAGE, type ServiceBankItem } from '@/lib/service-bank';
 
 interface ServiceDetailModalProps {
   open: boolean;
@@ -39,11 +39,14 @@ export function ServiceDetailModal({
     <Modal open={open} onClose={onClose} className="max-w-md p-0 overflow-hidden">
       <div className="relative aspect-[4/3] bg-gray-100">
         <Image
-          src={item.imageUrl}
+          src={item.defaultImageUrl}
           alt={name}
           fill
           className="object-cover"
           sizes="(max-width: 640px) 100vw, 448px"
+          onError={(event) => {
+            event.currentTarget.src = FALLBACK_SERVICE_IMAGE;
+          }}
         />
         <button
           type="button"

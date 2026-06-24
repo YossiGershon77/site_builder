@@ -9,6 +9,10 @@ const config: Config = {
   theme: {
     extend: {
       keyframes: {
+        'page-fade-up': {
+          '0%': { opacity: '0', transform: 'translateY(12px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
         'step-in-right': {
           '0%': { opacity: '0', transform: 'translateX(28px)' },
           '100%': { opacity: '1', transform: 'translateX(0)' },
@@ -23,6 +27,7 @@ const config: Config = {
         },
       },
       animation: {
+        'page-fade-up': 'page-fade-up 0.28s cubic-bezier(0.22, 1, 0.36, 1) both',
         'step-in-right': 'step-in-right 0.38s cubic-bezier(0.22, 1, 0.36, 1) both',
         'step-in-left': 'step-in-left 0.38s cubic-bezier(0.22, 1, 0.36, 1) both',
         'step-fade-up': 'step-fade-up 0.38s cubic-bezier(0.22, 1, 0.36, 1) both',

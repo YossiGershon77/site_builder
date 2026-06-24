@@ -12,7 +12,11 @@ import {
   validateAddress,
   validateGoogleMapsUrl,
   validateHours,
+  validateSetupName,
+  validateSocialUrl,
   validateSubdomain,
+  validateTagline,
+  validateWhatsappNumber,
 } from '@/lib/setup/validation';
 import { SetupStepper } from '@/components/setup/SetupStepper';
 import { SubdomainInput } from '@/components/setup/SubdomainInput';
@@ -31,18 +35,27 @@ import { SetupShellProvider, useSetupShell } from '@/components/setup/SetupShell
 import { useLanguage } from '@/lib/i18n/context';
 import { getSetupTranslations } from '@/lib/setup/translations';
 
+function getInitialSetupStep(searchParams: ReturnType<typeof useSearchParams>) {
+  const requestedStep = Number(searchParams.get('step'));
+  return Number.isInteger(requestedStep) && requestedStep >= 1 && requestedStep <= 5
+    ? requestedStep
+    : mockSetupSession.currentStep;
+}
+
 export default function SetupPage() {
   return (
     <SetupShellProvider>
-      <Suspense
-        fallback={
-          <div className="py-12 text-center text-gray-400 text-sm">Loading setup…</div>
-        }
-      >
+      <Suspense fallback={<SetupLoading />}>
         <SetupWizard />
       </Suspense>
     </SetupShellProvider>
   );
+}
+
+function SetupLoading() {
+  const { locale } = useLanguage();
+  const t = getSetupTranslations(locale);
+  return <div className="py-12 text-center text-gray-400 text-sm">{t.loading}</div>;
 }
 
 function SetupWizard() {
@@ -52,20 +65,30 @@ function SetupWizard() {
   const { locale } = useLanguage();
   const t = getSetupTranslations(locale);
 
-  const [currentStep, setCurrentStep] = useState(mockSetupSession.currentStep);
+  const [currentStep, setCurrentStep] = useState(() =>
+    getInitialSetupStep(searchParams),
+  );
   const [data, setData] = useState<SetupData>(() =>
     structuredClone(mockSetupSession.data),
   );
   const [toast, setToast] = useState<ToastState | null>(null);
   const [saving, setSaving] = useState(false);
+  const [direction, setDirection] = useState<'forward' | 'back'>('forward');
   const [shakeNext, setShakeNext] = useState(false);
   const [highlightRequired, setHighlightRequired] = useState(false);
 
+  const [nameError, setNameError] = useState<string | null>(null);
+  const [taglineError, setTaglineError] = useState<string | null>(null);
+  const [whatsappError, setWhatsappError] = useState<string | null>(null);
   const [subdomainError, setSubdomainError] = useState<string | null>(null);
   const [googleError, setGoogleError] = useState<string | null>(null);
   const [googleWarning, setGoogleWarning] = useState<string | null>(null);
   const [addressError, setAddressError] = useState<string | null>(null);
   const [aboutError, setAboutError] = useState<string | null>(null);
+  const [instagramError, setInstagramError] = useState<string | null>(null);
+  const [instagramWarning, setInstagramWarning] = useState<string | null>(null);
+  const [facebookError, setFacebookError] = useState<string | null>(null);
+  const [facebookWarning, setFacebookWarning] = useState<string | null>(null);
   const [hoursErrors, setHoursErrors] = useState<Record<string, string>>({});
 
   const tokenChecked = useRef(false);
@@ -93,7 +116,7 @@ function SetupWizard() {
     // TODO [ASAF]: Replace with real progress saving to database
     console.log('Setup saved', { currentStep, data });
     setToast({
-      message: 'Progress saved. Use your setup link to continue anytime.',
+      message: t.toasts.progressSaved,
       variant: 'success',
     });
   }, [currentStep, data]);
@@ -117,33 +140,87 @@ function SetupWizard() {
   }
 
   function isStep1Valid(): boolean {
+    const nameErr = validateSetupName(data.details.name);
+    const taglineErr = validateTagline(data.details.tagline);
+    const whatsappErr = validateWhatsappNumber(data.details.whatsappNumber);
     const subErr = validateSubdomain(data.details.subdomain);
     const addrErr = validateAddress(data.details.address);
     const aboutErr = validateAbout(data.details.about);
     const { error: gErr } = validateGoogleMapsUrl(data.details.googleMapsUrl);
-    return !subErr && !addrErr && !aboutErr && !gErr;
+    const { error: instagramErr } = validateSocialUrl(
+      data.details.instagramUrl,
+      'instagram.com',
+    );
+    const { error: facebookErr } = validateSocialUrl(
+      data.details.facebookUrl,
+      'facebook.com',
+    );
+    return (
+      !nameErr &&
+      !taglineErr &&
+      !whatsappErr &&
+      !subErr &&
+      !addrErr &&
+      !aboutErr &&
+      !gErr &&
+      !instagramErr &&
+      !facebookErr
+    );
   }
 
   async function handleNext() {
     if (currentStep === 1) {
+      const nameErr = validateSetupName(data.details.name);
+      const taglineErr = validateTagline(data.details.tagline);
+      const whatsappErr = validateWhatsappNumber(data.details.whatsappNumber);
       const subErr = validateSubdomain(data.details.subdomain);
       const addrErr = validateAddress(data.details.address);
       const aboutErr = validateAbout(data.details.about);
       const { error: gErr, warning: gWarn } = validateGoogleMapsUrl(
         data.details.googleMapsUrl,
       );
+      const { error: instagramErr, warning: instagramWarn } = validateSocialUrl(
+        data.details.instagramUrl,
+        'instagram.com',
+      );
+      const { error: facebookErr, warning: facebookWarn } = validateSocialUrl(
+        data.details.facebookUrl,
+        'facebook.com',
+      );
 
+      setNameError(nameErr);
+      setTaglineError(taglineErr);
+      setWhatsappError(whatsappErr);
       setSubdomainError(subErr);
       setAddressError(addrErr);
       setAboutError(aboutErr);
       setGoogleError(gErr);
       setGoogleWarning(gWarn);
+      setInstagramError(instagramErr);
+      setInstagramWarning(instagramWarn);
+      setFacebookError(facebookErr);
+      setFacebookWarning(facebookWarn);
 
-      if (subErr || addrErr || aboutErr || gErr) {
+      if (
+        nameErr ||
+        taglineErr ||
+        whatsappErr ||
+        subErr ||
+        addrErr ||
+        aboutErr ||
+        gErr ||
+        instagramErr ||
+        facebookErr
+      ) {
         setHighlightRequired(true);
         triggerInvalidNext();
-        if (subErr) scrollToFirstError('[data-field="subdomain"]');
+        if (nameErr) scrollToFirstError('[data-field="name"]');
+        else if (taglineErr) scrollToFirstError('[data-field="tagline"]');
+        else if (whatsappErr) scrollToFirstError('[data-field="whatsapp"]');
+        else if (subErr) scrollToFirstError('[data-field="subdomain"]');
         else if (addrErr) scrollToFirstError('[data-field="address"]');
+        else if (instagramErr) scrollToFirstError('[data-field="instagram"]');
+        else if (facebookErr) scrollToFirstError('[data-field="facebook"]');
         return;
       }
     }
@@ -180,11 +257,15 @@ function SetupWizard() {
     console.log(`Step ${currentStep} data:`, data);
     await new Promise((r) => setTimeout(r, 500));
     setSaving(false);
+    setDirection('forward');
     setCurrentStep((s) => s + 1);
   }
 
   function handleBack() {
-    if (currentStep > 1) setCurrentStep((s) => s - 1);
+    if (currentStep > 1) {
+      setDirection('back');
+      setCurrentStep((s) => s - 1);
+    }
   }
 
   function handleComplete() {
@@ -192,12 +273,17 @@ function SetupWizard() {
     console.log('Completing setup', data);
     setTimeout(() => {
       setSaving(false);
+      setDirection('forward');
       setCurrentStep(6);
     }, 500);
   }
 
   if (currentStep === 6) {
-    return <SetupComplete data={data} onDone={() => {}} />;
+    return (
+      <div className="animate-step-fade-up">
+        <SetupComplete data={data} onDone={() => {}} />
+      </div>
+    );
   }
 
   const step1Ready = isStep1Valid();
@@ -220,15 +306,114 @@ function SetupWizard() {
       <Toast toast={toast} onClose={() => setToast(null)} />
       <SetupStepper
         currentStep={currentStep}
-        onStepClick={(step) => step < currentStep && setCurrentStep(step)}
+        onStepClick={(step) => {
+          if (step < currentStep) {
+            setDirection('back');
+            setCurrentStep(step);
+          }
+        }}
         labels={t.stepper}
       />
 
+      <div
+        key={currentStep}
+        className={direction === 'back' ? 'animate-step-in-left' : 'animate-step-in-right'}
+      >
       {currentStep === 1 && (
         <div className="space-y-6">
           <div>
             <h1 className="text-2xl font-semibold text-[#111111]">{t.step1.title}</h1>
             <p className="text-gray-500 mt-1">{t.step1.sub}</p>
+          </div>
+
+          <div data-field="name">
+            <label className={`block text-sm font-medium mb-1.5 ${nameError ? 'text-red-500' : 'text-[#111111]'}`}>
+              {t.step1.nameLabel}
+            </label>
+            <p className="text-xs text-gray-500 mb-2">{t.step1.nameSub}</p>
+            <input
+              type="text"
+              value={data.details.name}
+              onChange={(e) => {
+                const value = e.target.value;
+                setData((d) => ({ ...d, details: { ...d.details, name: value } }));
+                setNameError(validateSetupName(value));
+                setHighlightRequired(false);
+              }}
+              placeholder={t.step1.namePlaceholder}
+              className={`w-full px-4 py-3 text-sm rounded-xl border outline-none ${
+                nameError || (highlightRequired && !data.details.name)
+                  ? 'border-red-500'
+                  : 'border-gray-200'
+              }`}
+            />
+            <FieldError message={nameError} />
+          </div>
+
+          <div data-field="tagline">
+            <label className={`flex items-center gap-2 text-sm font-medium mb-1.5 ${taglineError ? 'text-red-500' : 'text-[#111111]'}`}>
+              {t.step1.taglineLabel}
+              <span className="text-xs font-normal text-gray-400">{t.optional}</span>
+            </label>
+            <p className="text-xs text-gray-500 mb-2">{t.step1.taglineSub}</p>
+            <input
+              type="text"
+              value={data.details.tagline}
+              maxLength={100}
+              onChange={(e) => {
+                const value = e.target.value;
+                setData((d) => ({ ...d, details: { ...d.details, tagline: value } }));
+                setTaglineError(validateTagline(value));
+              }}
+              placeholder={t.step1.taglinePlaceholder}
+              className={`w-full px-4 py-3 text-sm rounded-xl border outline-none ${
+                taglineError ? 'border-red-500' : 'border-gray-200'
+              }`}
+            />
+            <div className="flex justify-between mt-1">
+              <FieldError message={taglineError} />
+              <span
+                className={`text-xs ml-auto ${
+                  data.details.tagline.length > 80 ? 'text-red-500' : 'text-gray-400'
+                }`}
+              >
+                {data.details.tagline.length} / 80
+              </span>
+            </div>
+          </div>
+
+          <div data-field="whatsapp">
+            <label className={`block text-sm font-medium mb-1.5 ${whatsappError ? 'text-red-500' : 'text-[#111111]'}`}>
+              {t.step1.whatsappLabel}
+            </label>
+            <p className="text-xs text-gray-500 mb-2">{t.step1.whatsappSub}</p>
+            <div className="relative">
+              <svg
+                className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-green-500"
+                fill="currentColor"
+                viewBox="0 0 24 24"
+                aria-hidden
+              >
+                <path d="M12.04 2C6.56 2 2.1 6.45 2.1 11.93c0 1.75.46 3.46 1.34 4.97L2 22l5.25-1.38a9.86 9.86 0 004.79 1.22h.01c5.48 0 9.94-4.45 9.94-9.93C21.99 6.45 17.53 2 12.04 2zm5.84 14.19c-.25.7-1.47 1.34-2.03 1.39-.52.05-1.17.07-1.89-.12-.44-.12-1-.33-1.72-.65-3.03-1.31-5-4.36-5.15-4.56-.15-.2-1.23-1.64-1.23-3.13s.78-2.22 1.06-2.52c.28-.3.61-.38.81-.38h.58c.18.01.43-.07.67.51.25.6.85 2.08.92 2.23.08.15.13.33.03.53-.1.2-.15.33-.3.51-.15.18-.32.4-.45.53-.15.15-.31.31-.13.61.18.3.79 1.31 1.7 2.12 1.17 1.04 2.16 1.36 2.46 1.51.3.15.48.13.66-.08.2-.23.76-.88.96-1.18.2-.3.4-.25.68-.15.28.1 1.77.83 2.07.98.3.15.5.23.58.36.08.13.08.75-.17 1.48z" />
+              </svg>
+              <input
+                type="text"
+                value={data.details.whatsappNumber}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setData((d) => ({ ...d, details: { ...d.details, whatsappNumber: value } }));
+                  setWhatsappError(validateWhatsappNumber(value));
+                  setHighlightRequired(false);
+                }}
+                placeholder={t.step1.whatsappPlaceholder}
+                className={`w-full pl-10 pr-4 py-3 text-sm rounded-xl border outline-none ${
+                  whatsappError || (highlightRequired && !data.details.whatsappNumber)
+                    ? 'border-red-500'
+                    : 'border-gray-200'
+                }`}
+              />
+            </div>
+            <FieldError message={whatsappError} />
           </div>
 
           <div data-field="subdomain">
@@ -340,6 +525,100 @@ function SetupWizard() {
               </span>
             </div>
           </div>
+
+          <div data-field="instagram">
+            <label className="flex items-center gap-2 text-sm font-medium text-[#111111] mb-1.5">
+              {t.step1.instagramLabel}
+              <span className="text-xs font-normal text-gray-400">{t.optional}</span>
+            </label>
+            <div className="relative">
+              <svg
+                className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={1.8}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden
+              >
+                <rect x="4" y="4" width="16" height="16" rx="4" />
+                <circle cx="12" cy="12" r="3" />
+                <path d="M16.5 7.5h.01" />
+              </svg>
+              <input
+                type="url"
+                value={data.details.instagramUrl}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setData((d) => ({
+                    ...d,
+                    details: { ...d.details, instagramUrl: value },
+                  }));
+                  const { error, warning } = validateSocialUrl(value, 'instagram.com');
+                  setInstagramError(error);
+                  setInstagramWarning(warning);
+                }}
+                placeholder={t.step1.instagramPlaceholder}
+                className={`w-full pl-10 pr-4 py-3 text-sm rounded-xl border outline-none ${
+                  instagramError ? 'border-red-500' : 'border-gray-200'
+                }`}
+              />
+            </div>
+            <FieldError message={instagramError} />
+            {instagramWarning && !instagramError && (
+              <p className="text-sm text-yellow-600 mt-1 flex items-start gap-1 animate-fade-in">
+                <span aria-hidden>⚠</span>
+                {instagramWarning}
+              </p>
+            )}
+          </div>
+
+          <div data-field="facebook">
+            <label className="flex items-center gap-2 text-sm font-medium text-[#111111] mb-1.5">
+              {t.step1.facebookLabel}
+              <span className="text-xs font-normal text-gray-400">{t.optional}</span>
+            </label>
+            <div className="relative">
+              <svg
+                className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={1.8}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden
+              >
+                <path d="M17 2h-3a5 5 0 00-5 5v3H6v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z" />
+              </svg>
+              <input
+                type="url"
+                value={data.details.facebookUrl}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setData((d) => ({
+                    ...d,
+                    details: { ...d.details, facebookUrl: value },
+                  }));
+                  const { error, warning } = validateSocialUrl(value, 'facebook.com');
+                  setFacebookError(error);
+                  setFacebookWarning(warning);
+                }}
+                placeholder={t.step1.facebookPlaceholder}
+                className={`w-full pl-10 pr-4 py-3 text-sm rounded-xl border outline-none ${
+                  facebookError ? 'border-red-500' : 'border-gray-200'
+                }`}
+              />
+            </div>
+            <FieldError message={facebookError} />
+            {facebookWarning && !facebookError && (
+              <p className="text-sm text-yellow-600 mt-1 flex items-start gap-1 animate-fade-in">
+                <span aria-hidden>⚠</span>
+                {facebookWarning}
+              </p>
+            )}
+          </div>
         </div>
       )}
 
@@ -357,13 +636,27 @@ function SetupWizard() {
             onGlobalShowPricesChange={(v) =>
               setData((d) => ({
                 ...d,
-                services: { ...d.services, globalShowPrices: v },
+                services: {
+                  ...d.services,
+                  globalShowPrices: v,
+                  selectedServices: d.services.selectedServices.map((service) => ({
+                    ...service,
+                    showPrice: v,
+                  })),
+                },
               }))
             }
             onGlobalShowDurationsChange={(v) =>
               setData((d) => ({
                 ...d,
-                services: { ...d.services, globalShowDurations: v },
+                services: {
+                  ...d.services,
+                  globalShowDurations: v,
+                  selectedServices: d.services.selectedServices.map((service) => ({
+                    ...service,
+                    showDuration: v,
+                  })),
+                },
               }))
             }
             onSelectedServicesChange={(selectedServices) =>
@@ -371,6 +664,9 @@ function SetupWizard() {
                 ...d,
                 services: { ...d.services, selectedServices },
               }))
+            }
+            onCustomServiceAdded={(message) =>
+              setToast({ message, variant: 'success' })
             }
           />
           <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 p-4">
@@ -538,7 +834,10 @@ function SetupWizard() {
                 ...d,
                 staff: { invites: [...d.staff.invites, invite] },
               }));
-              setToast({ message: `Invite sent to ${invite.name}`, variant: 'success' });
+              setToast({
+                message: t.toasts.inviteSent.replace('{name}', invite.name),
+                variant: 'success',
+              });
             }}
           />
 
@@ -549,11 +848,12 @@ function SetupWizard() {
                 ...d,
                 staff: { invites: d.staff.invites.filter((i) => i.id !== id) },
               }));
-              setToast({ message: 'Invite removed', variant: 'success' });
+              setToast({ message: t.toasts.inviteRemoved, variant: 'success' });
             }}
           />
         </div>
       )}
+      </div>
 
       <div className="mt-10 flex items-center justify-between gap-4">
         {currentStep > 1 ? (

@@ -2,12 +2,14 @@
 
 import { DaysOffCalendar } from '@/components/dashboard/DaysOffCalendar';
 import { useDashboard } from '@/lib/dashboard/context';
+import { useLanguage } from '@/lib/i18n/context';
 import { OWNER_MEMBER_ID } from '@/lib/days-off/types';
-import { formatHoursSummary } from '@/lib/dashboard/utils';
+import { DAY_LABELS, DAY_LABELS_HE, formatHoursSummary } from '@/lib/dashboard/utils';
 import { WorkingHoursForm } from '@/components/dashboard/WorkingHoursForm';
 
 export default function MyHoursPage() {
   const { user, barber } = useDashboard();
+  const { locale, t } = useLanguage();
   const isStaff = user.role === 'TEAM_MEMBER';
 
   const member = isStaff
@@ -45,8 +47,15 @@ export default function MyHoursPage() {
 
   return (
     <div className="max-w-5xl">
-      <h1 className="text-2xl font-semibold text-[#111111] mb-2">My working hours</h1>
-      <p className="text-sm text-gray-500 mb-8">{formatHoursSummary(summaryMember)}</p>
+      <h1 className="text-2xl font-semibold text-[#111111] mb-2">{t.dashboard.hours.title}</h1>
+      <p className="text-sm text-gray-500 mb-8">
+        {formatHoursSummary(summaryMember, {
+          dayLabels: locale === 'he' ? DAY_LABELS_HE : DAY_LABELS,
+          noDaysSet: t.dashboard.hours.noDaysSet,
+          hoursNotSet: t.dashboard.hours.hoursNotSet,
+          breakLabel: t.dashboard.hours.break,
+        })}
+      </p>
 
       <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
         <div className="flex-1 min-w-0">
@@ -60,6 +69,7 @@ export default function MyHoursPage() {
               breakEnd={breakEnd}
               bufferMinutes={bufferMinutes}
               constrainToShop={isStaff}
+              labels={t.dashboard.hours}
               onSubmit={handleSave}
             />
 
@@ -69,10 +79,10 @@ export default function MyHoursPage() {
                 form="working-hours-form"
                 className="px-6 py-3 bg-[#111111] text-white font-semibold rounded-xl hover:bg-gray-800 transition-colors"
               >
-                Save changes
+                {t.dashboard.hours.saveChanges}
               </button>
               <button type="button" className="text-sm text-gray-500 hover:text-gray-700">
-                Discard
+                {t.dashboard.hours.discard}
               </button>
             </div>
           </div>

@@ -106,8 +106,12 @@ export function NavBar({ barberName }: NavBarProps) {
           </div>
         </div>
 
-        {isOpen && (
-          <div className="md:hidden border-t border-gray-100 py-3">
+        <div
+          className={`md:hidden overflow-hidden border-t border-gray-100 transition-all duration-300 ease-out ${
+            isOpen ? 'max-h-[420px] opacity-100 py-3' : 'max-h-0 opacity-0 py-0'
+          }`}
+          aria-hidden={!isOpen}
+        >
             {navLinks.map((link) => (
               <Link
                 key={link.href}
@@ -138,7 +142,6 @@ export function NavBar({ barberName }: NavBarProps) {
               <LanguageToggle />
             </div>
           </div>
-        )}
       </div>
     </nav>
   );

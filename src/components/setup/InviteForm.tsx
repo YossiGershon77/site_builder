@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import type { SetupInvite } from '@/lib/mock';
+import { useLanguage } from '@/lib/i18n/context';
+import { getSetupTranslations } from '@/lib/setup/translations';
 import { validateEmail } from '@/lib/setup/validation';
 import { FieldError } from './FieldError';
 
@@ -11,6 +13,8 @@ interface InviteFormProps {
 }
 
 export function InviteForm({ onInvite, existingEmails }: InviteFormProps) {
+  const { locale } = useLanguage();
+  const t = getSetupTranslations(locale);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [nameError, setNameError] = useState<string | null>(null);
@@ -19,7 +23,7 @@ export function InviteForm({ onInvite, existingEmails }: InviteFormProps) {
   function handleSubmit() {
     let valid = true;
     if (!name.trim()) {
-      setNameError('Please enter a name');
+      setNameError(t.invite.enterName);
       valid = false;
     } else {
       setNameError(null);
@@ -30,7 +34,7 @@ export function InviteForm({ onInvite, existingEmails }: InviteFormProps) {
       setEmailError(emailErr);
       valid = false;
     } else if (existingEmails.includes(email.trim().toLowerCase())) {
-      setEmailError('This email has already been invited');
+      setEmailError(t.invite.alreadyInvited);
       valid = false;
     } else {
       setEmailError(null);
@@ -56,7 +60,7 @@ export function InviteForm({ onInvite, existingEmails }: InviteFormProps) {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label className={`block text-sm font-medium mb-1.5 ${nameError ? 'text-red-500' : 'text-[#111111]'}`}>
-            Full name
+            {t.invite.fullName}
           </label>
           <input
             type="text"
@@ -73,7 +77,7 @@ export function InviteForm({ onInvite, existingEmails }: InviteFormProps) {
         </div>
         <div>
           <label className={`block text-sm font-medium mb-1.5 ${emailError ? 'text-red-500' : 'text-[#111111]'}`}>
-            Email address
+            {t.invite.emailAddress}
           </label>
           <input
             type="email"
@@ -95,7 +99,7 @@ export function InviteForm({ onInvite, existingEmails }: InviteFormProps) {
           onClick={handleSubmit}
           className="px-6 py-3 bg-[#111111] text-white text-sm font-semibold rounded-xl hover:bg-gray-800 transition-colors"
         >
-          Send invite
+          {t.invite.sendInvite}
         </button>
       </div>
     </div>

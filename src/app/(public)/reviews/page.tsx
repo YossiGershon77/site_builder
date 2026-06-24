@@ -45,36 +45,34 @@ export default function ReviewsPage() {
   const trustIndicators = [
     {
       icon: <ScissorsIcon />,
+      // TODO [ASAF]: Add yearsOfExperience field to barber profile
       stat: '25+',
-      label: 'Years of experience',
+      label: t.reviews.yearsExperience,
     },
     {
       icon: <UsersIcon />,
       stat: '1,000+',
-      label: 'Happy clients',
+      label: t.reviews.happyClients,
     },
     {
       icon: <OutlineStarIcon />,
       stat: '5.0',
-      label: 'Average rating',
+      label: t.reviews.averageRating,
     },
   ];
 
   const valueCards = [
     {
-      title: 'Precision & skill',
-      description:
-        'Every cut is tailored, never rushed. Attention to detail that shows.',
+      title: t.reviews.valuePrecisionTitle,
+      description: t.reviews.valuePrecisionDescription,
     },
     {
-      title: 'The atmosphere',
-      description:
-        'A place where you feel welcome the moment you walk in. Real conversations, real connection.',
+      title: t.reviews.valueAtmosphereTitle,
+      description: t.reviews.valueAtmosphereDescription,
     },
     {
-      title: 'Consistency',
-      description:
-        "Same great result, every time. That's why clients keep coming back for years.",
+      title: t.reviews.valueConsistencyTitle,
+      description: t.reviews.valueConsistencyDescription,
     },
   ];
 
@@ -83,7 +81,7 @@ export default function ReviewsPage() {
       <section className="bg-gray-50 py-16 px-4">
         <div className="max-w-4xl mx-auto text-center">
           <p className="uppercase tracking-widest text-xs text-gray-400">
-            Our reputation speaks for itself
+            {t.reviews.reputation}
           </p>
           <div className="mt-6 flex justify-center gap-2">
             {[1, 2, 3, 4, 5].map((star) => (
@@ -91,7 +89,7 @@ export default function ReviewsPage() {
             ))}
           </div>
           <p className="mt-5 text-lg text-gray-500">
-            See what our clients say on Google
+            {googleReviewsUrl ? t.reviews.seeOnGoogle : t.reviews.comingSoon}
           </p>
           <div className="mt-8">
             {googleReviewsUrl ? (
@@ -101,7 +99,7 @@ export default function ReviewsPage() {
                 rel="noopener noreferrer"
                 className="inline-flex items-center justify-center px-8 py-3 bg-[#111111] text-white font-semibold rounded-full hover:bg-gray-800 transition-colors"
               >
-                Read reviews on Google →
+                {t.reviews.readOnGoogle}
               </a>
             ) : (
               <p className="text-gray-400 text-lg">{t.reviews.comingSoon}</p>
@@ -112,7 +110,7 @@ export default function ReviewsPage() {
 
       <section className="bg-white py-16 px-4">
         <div className="max-w-4xl mx-auto">
-          {/* TODO [ASAF]: Pull real stats from Google Places API and barber profile */}
+          {/* TODO [ASAF]: Pull real stats from Google Places API */}
           <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-gray-100">
             {trustIndicators.map((indicator) => (
               <div
@@ -133,7 +131,7 @@ export default function ReviewsPage() {
       <section className="bg-gray-50 py-16 px-4">
         <div className="max-w-6xl mx-auto">
           <h1 className="text-2xl font-semibold tracking-tight text-[#111111] text-center">
-            What clients love about us
+            {t.reviews.loveTitle}
           </h1>
 
           <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -158,7 +156,7 @@ export default function ReviewsPage() {
           </div>
 
           <p className="mt-6 text-xs text-gray-400 text-center">
-            Visit our Google listing to read real client reviews
+            {t.reviews.googleHint}
           </p>
         </div>
       </section>
@@ -166,16 +164,16 @@ export default function ReviewsPage() {
       <section className="bg-white py-20 px-4 text-center">
         <div className="max-w-3xl mx-auto">
           <h2 className="text-2xl md:text-3xl font-semibold tracking-tight text-[#111111]">
-            Ready to experience it yourself?
+            {t.reviews.ctaTitle}
           </h2>
-          <p className="mt-2 text-gray-500">Book your appointment today</p>
+          <p className="mt-2 text-gray-500">{t.reviews.ctaSub}</p>
 
           <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
             <Link
               href="/booking"
               className="w-full sm:w-auto px-8 py-3 bg-[#111111] text-white font-semibold rounded-full hover:bg-gray-800 transition-colors"
             >
-              Book now
+              {t.common.bookNow}
             </Link>
             {googleReviewsUrl && (
               <a
@@ -184,7 +182,7 @@ export default function ReviewsPage() {
                 rel="noopener noreferrer"
                 className="w-full sm:w-auto px-8 py-3 border border-[#111111] text-[#111111] font-semibold rounded-full hover:bg-gray-50 transition-colors"
               >
-                Read Google reviews →
+                {t.reviews.readGoogleReviews}
               </a>
             )}
           </div>

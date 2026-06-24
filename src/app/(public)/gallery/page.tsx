@@ -6,7 +6,11 @@ import { PageHeading } from '@/components/PageHeading';
 
 export default function GalleryPage() {
   const { t } = useLanguage();
-  const images = t.barber.galleryImages;
+  const images = [...t.barber.galleryImages].sort((a, b) => {
+    if (a.isFeatured) return -1;
+    if (b.isFeatured) return 1;
+    return a.displayOrder - b.displayOrder;
+  });
 
   return (
     <div className="py-12 px-4 max-w-6xl mx-auto">
@@ -17,20 +21,19 @@ export default function GalleryPage() {
           {t.gallery.empty}
         </div>
       ) : (
-        <div className="columns-2 md:columns-3 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
           {images.map((img) => (
             <div
               key={img.id}
-              className={`break-inside-avoid mb-4 rounded-xl overflow-hidden ${
+              className={`group relative rounded-xl overflow-hidden bg-gray-100 transition-shadow duration-200 hover:shadow-lg ${
                 img.isFeatured ? 'ring-2 ring-black/10' : ''
-              }`}
+              } ${img.isFeatured ? 'col-span-2 row-span-2 aspect-square md:aspect-auto' : 'aspect-square'}`}
             >
               <Image
                 src={img.url}
                 alt={t.gallery.imageAlt}
-                width={img.isFeatured ? 1200 : 600}
-                height={img.isFeatured ? 800 : 750}
-                className="w-full h-auto object-cover"
+                fill
+                className="object-cover transition-transform duration-500 ease-out group-hover:scale-[1.03]"
                 sizes="(max-width: 768px) 50vw, 33vw"
               />
             </div>

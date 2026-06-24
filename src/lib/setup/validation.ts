@@ -1,5 +1,24 @@
 import { timeToMinutes } from './constants';
 
+export function validateSetupName(value: string): string | null {
+  if (!value.trim()) return 'Please enter your name';
+  if (value.trim().length < 2) return 'Name must be at least 2 characters';
+  return null;
+}
+
+export function validateTagline(value: string): string | null {
+  if (value.length > 80) return 'Please keep it under 80 characters';
+  return null;
+}
+
+export function validateWhatsappNumber(value: string): string | null {
+  if (!value.trim()) return 'Please enter your WhatsApp number';
+  const digits = value.replace(/\D/g, '');
+  if (!digits) return 'Please enter a valid phone number';
+  if (digits.length < 9) return 'Phone number seems too short';
+  return null;
+}
+
 export function validateSubdomain(value: string): string | null {
   if (!value.trim()) return 'Please choose a site address';
   if (value.length < 3) return 'Must be at least 3 characters';
@@ -34,6 +53,33 @@ export function validateGoogleMapsUrl(value: string): {
     return {
       error: null,
       warning: "This doesn't look like a Google Maps link. Are you sure?",
+    };
+  }
+
+  return { error: null, warning: null };
+}
+
+export function validateSocialUrl(
+  value: string,
+  expectedDomain: 'instagram.com' | 'facebook.com',
+): {
+  error: string | null;
+  warning: string | null;
+} {
+  if (!value.trim()) return { error: null, warning: null };
+
+  try {
+    new URL(value);
+  } catch {
+    return { error: 'Please enter a valid URL', warning: null };
+  }
+
+  if (!value.includes(expectedDomain)) {
+    const platform = expectedDomain === 'instagram.com' ? 'Instagram' : 'Facebook';
+    const article = expectedDomain === 'instagram.com' ? 'an' : 'a';
+    return {
+      error: null,
+      warning: `This doesn't look like ${article} ${platform} link`,
     };
   }
 

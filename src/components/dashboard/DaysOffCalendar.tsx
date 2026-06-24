@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { formatDateKey, isSameDayKey } from '@/lib/days-off/types';
 import { toggleDayOff, useDaysOff } from '@/lib/days-off/store';
+import { useLanguage } from '@/lib/i18n/context';
 
 interface DaysOffCalendarProps {
   memberId: string;
@@ -10,10 +11,16 @@ interface DaysOffCalendarProps {
   workingDays?: string[];
 }
 
-const MONTH_NAMES = [
+const MONTH_NAMES_EN = [
   'January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December',
 ];
+const MONTH_NAMES_HE = [
+  'ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני',
+  'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר',
+];
+const DAY_NAMES_EN = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+const DAY_NAMES_HE = ['א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ש'];
 
 const DAY_INDEX: Record<string, number> = {
   Sunday: 0,
@@ -26,6 +33,7 @@ const DAY_INDEX: Record<string, number> = {
 };
 
 export function DaysOffCalendar({ memberId, memberName, workingDays }: DaysOffCalendarProps) {
+  const { locale, t } = useLanguage();
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
@@ -66,19 +74,21 @@ export function DaysOffCalendar({ memberId, memberName, workingDays }: DaysOffCa
     const [y, m] = key.split('-').map(Number);
     return y === year && m === month + 1;
   }).length;
+  const monthNames = locale === 'he' ? MONTH_NAMES_HE : MONTH_NAMES_EN;
+  const dayNames = locale === 'he' ? DAY_NAMES_HE : DAY_NAMES_EN;
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-4 lg:sticky lg:top-6">
       <div className="mb-4">
-        <h2 className="text-lg font-semibold text-[#111111]">Days off</h2>
+        <h2 className="text-lg font-semibold text-[#111111]">{t.dashboard.daysOff.title}</h2>
         <p className="text-sm text-gray-500 mt-1">
-          Tap a date to mark it as unavailable for bookings.
+          {t.dashboard.daysOff.sub}
         </p>
       </div>
 
       <div className="flex items-center justify-between mb-4">
         <h3 className="font-semibold text-[#111111] text-sm">
-          {MONTH_NAMES[month]} {year}
+          {monthNames[month]} {year}
         </h3>
         <div className="flex gap-1">
           <button
@@ -86,7 +96,7 @@ export function DaysOffCalendar({ memberId, memberName, workingDays }: DaysOffCa
             onClick={() => shiftMonth(-1)}
             disabled={year === today.getFullYear() && month === today.getMonth()}
             className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 disabled:opacity-30 disabled:cursor-not-allowed"
-            aria-label="Previous month"
+            aria-label={t.dashboard.schedule.previousMonth}
           >
             ←
           </button>
@@ -94,7 +104,7 @@ export function DaysOffCalendar({ memberId, memberName, workingDays }: DaysOffCa
             type="button"
             onClick={() => shiftMonth(1)}
             className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400"
-            aria-label="Next month"
+            aria-label={t.dashboard.schedule.nextMonth}
           >
             →
           </button>
@@ -102,7 +112,7 @@ export function DaysOffCalendar({ memberId, memberName, workingDays }: DaysOffCa
       </div>
 
       <div className="grid grid-cols-7 mb-1">
-        {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((d) => (
+        {dayNames.map((d) => (
           <div key={d} className="text-center text-xs text-gray-400 py-1 font-medium">
             {d}
           </div>
@@ -129,8 +139,8 @@ export function DaysOffCalendar({ memberId, memberName, workingDays }: DaysOffCa
                     past
                       ? undefined
                       : marked
-                      ? 'Remove day off'
-                      : 'Mark as day off'
+                      ? t.dashboard.daysOff.removeDayOff
+                      : t.dashboard.daysOff.markDayOff
                   }
                   className={`w-8 h-8 rounded-full text-sm flex items-center justify-center transition-colors ${
                     marked
@@ -155,11 +165,11 @@ export function DaysOffCalendar({ memberId, memberName, workingDays }: DaysOffCa
       <div className="mt-4 flex items-center gap-3 text-xs text-gray-500">
         <span className="inline-flex items-center gap-1.5">
           <span className="w-3 h-3 rounded-full bg-amber-100 ring-1 ring-amber-300" />
-          Day off
+          {t.dashboard.daysOff.dayOff}
         </span>
         {markedCount > 0 && (
           <span className="text-gray-400">
-            · {markedCount} marked this month
+            · {t.dashboard.daysOff.markedThisMonth.replace('{count}', String(markedCount))}
           </span>
         )}
       </div>

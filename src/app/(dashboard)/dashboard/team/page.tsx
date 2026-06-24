@@ -4,7 +4,8 @@ import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useDashboard } from '@/lib/dashboard/context';
-import { formatHoursSummary, getInitials } from '@/lib/dashboard/utils';
+import { useLanguage } from '@/lib/i18n/context';
+import { DAY_LABELS, DAY_LABELS_HE, formatHoursSummary, getInitials } from '@/lib/dashboard/utils';
 import type { TeamMember } from '@/lib/mock';
 import {
   EditHoursModal,
@@ -19,11 +20,13 @@ function MemberMenu({
   onEditServices,
   onEditHours,
   onRemove,
+  labels,
 }: {
   member: TeamMember;
   onEditServices: () => void;
   onEditHours: () => void;
   onRemove: () => void;
+  labels: ReturnType<typeof useLanguage>['t']['dashboard']['team'];
 }) {
   const [open, setOpen] = useState(false);
 
@@ -33,7 +36,7 @@ function MemberMenu({
         type="button"
         onClick={() => setOpen(!open)}
         className="p-2 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600"
-        aria-label="Options"
+        aria-label={labels.options}
       >
         ⋯
       </button>
@@ -42,7 +45,7 @@ function MemberMenu({
           <button
             type="button"
             className="fixed inset-0 z-10"
-            aria-label="Close menu"
+            aria-label={labels.closeMenu}
             onClick={() => setOpen(false)}
           />
           <div className="absolute right-0 top-full mt-1 z-20 bg-white border border-gray-200 rounded-xl shadow-lg py-1 min-w-[160px]">
@@ -51,21 +54,21 @@ function MemberMenu({
               onClick={() => { setOpen(false); onEditServices(); }}
               className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
             >
-              Edit services
+              {labels.editServices}
             </button>
             <button
               type="button"
               onClick={() => { setOpen(false); onEditHours(); }}
               className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
             >
-              Edit hours
+              {labels.editHours}
             </button>
             <button
               type="button"
               onClick={() => { setOpen(false); onRemove(); }}
               className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50"
             >
-              Remove from team
+              {labels.removeFromTeam}
             </button>
           </div>
         </>
@@ -76,6 +79,7 @@ function MemberMenu({
 
 export default function TeamPage() {
   const { user, barber } = useDashboard();
+  const { locale, t } = useLanguage();
   const [inviteOpen, setInviteOpen] = useState(false);
   const [editServicesMember, setEditServicesMember] = useState<TeamMember | null>(null);
   const [editHoursMember, setEditHoursMember] = useState<TeamMember | null>(null);
@@ -85,9 +89,9 @@ export default function TeamPage() {
   if (user.role !== 'OWNER') {
     return (
       <div className="max-w-lg mx-auto mt-20 text-center">
-        <p className="text-gray-600">You don&apos;t have permission to view this page</p>
+        <p className="text-gray-600">{t.dashboard.team.noPermission}</p>
         <Link href="/dashboard" className="inline-block mt-4 text-sm font-medium text-[#111111] hover:underline">
-          Back to dashboard
+          {t.dashboard.team.backToDashboard}
         </Link>
       </div>
     );
@@ -99,13 +103,13 @@ export default function TeamPage() {
   return (
     <div className="max-w-3xl">
       <div className="flex items-center justify-between gap-4 mb-8">
-        <h1 className="text-2xl font-semibold text-[#111111]">Team</h1>
+        <h1 className="text-2xl font-semibold text-[#111111]">{t.dashboard.team.title}</h1>
         <button
           type="button"
           onClick={() => setInviteOpen(true)}
           className="px-4 py-2.5 bg-[#111111] text-white text-sm font-semibold rounded-xl hover:bg-gray-800 transition-colors"
         >
-          Invite team member
+          {t.dashboard.team.invite}
         </button>
       </div>
 
@@ -135,7 +139,14 @@ export default function TeamPage() {
                   </span>
                 ))}
               </div>
-              <p className="text-xs text-gray-400 mt-2">{formatHoursSummary(member)}</p>
+              <p className="text-xs text-gray-400 mt-2">
+                {formatHoursSummary(member, {
+                  dayLabels: locale === 'he' ? DAY_LABELS_HE : DAY_LABELS,
+                  noDaysSet: t.dashboard.hours.noDaysSet,
+                  hoursNotSet: t.dashboard.hours.hoursNotSet,
+                  breakLabel: t.dashboard.hours.break,
+                })}
+              </p>
             </div>
 
             <MemberMenu
@@ -143,6 +154,7 @@ export default function TeamPage() {
               onEditServices={() => setEditServicesMember(member)}
               onEditHours={() => setEditHoursMember(member)}
               onRemove={() => setRemoveMember(member)}
+              labels={t.dashboard.team}
             />
           </div>
         ))}
@@ -159,7 +171,7 @@ export default function TeamPage() {
               <div className="flex items-center gap-2">
                 <p className="font-medium text-[#111111]">{member.name}</p>
                 <span className="px-2 py-0.5 bg-amber-50 text-amber-700 text-xs rounded-full">
-                  Invitation pending
+                  {t.dashboard.team.invitationPending}
                 </span>
               </div>
               {member.email && <p className="text-sm text-gray-400">{member.email}</p>}
@@ -170,14 +182,14 @@ export default function TeamPage() {
                 onClick={() => console.log('Resend invite', member.email)}
                 className="text-xs text-gray-600 hover:text-[#111111]"
               >
-                Resend invite
+                {t.dashboard.team.resendInvite}
               </button>
               <button
                 type="button"
                 onClick={() => console.log('Cancel invite', member.email)}
                 className="text-xs text-red-600 hover:text-red-700"
               >
-                Cancel invite
+                {t.dashboard.team.cancelInvite}
               </button>
             </div>
           </div>
@@ -187,7 +199,9 @@ export default function TeamPage() {
       <InviteModal
         open={inviteOpen}
         onClose={() => setInviteOpen(false)}
-        onSuccess={(email) => setToast(`Invitation sent to ${email}`)}
+        onSuccess={(email) =>
+          setToast(t.dashboard.team.invitationSent.replace('{email}', email))
+        }
       />
       <EditServicesModal
         open={!!editServicesMember}

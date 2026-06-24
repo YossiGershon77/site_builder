@@ -1,6 +1,8 @@
 'use client';
 
 import { DAY_OPTIONS } from '@/lib/setup/constants';
+import { useLanguage } from '@/lib/i18n/context';
+import { getSetupTranslations } from '@/lib/setup/translations';
 import { FieldError } from './FieldError';
 
 export function DayPicker({
@@ -12,6 +14,9 @@ export function DayPicker({
   onChange: (days: string[]) => void;
   error?: string | null;
 }) {
+  const { locale } = useLanguage();
+  const t = getSetupTranslations(locale);
+
   function toggleDay(key: string) {
     if (selectedDays.includes(key)) {
       onChange(selectedDays.filter((d) => d !== key));
@@ -23,7 +28,7 @@ export function DayPicker({
   return (
     <div>
       <label className={`block text-sm font-medium mb-3 ${error ? 'text-red-500' : 'text-[#111111]'}`}>
-        Working days
+        {t.step3.workingDays}
       </label>
       <div className="flex flex-wrap gap-2">
         {DAY_OPTIONS.map((day) => {
@@ -39,9 +44,11 @@ export function DayPicker({
                   : 'bg-white text-[#111111] border-gray-200 hover:border-gray-400'
               }`}
             >
-              <span className="font-medium">{day.label}</span>
+              <span className="font-medium">
+                {locale === 'he' ? day.labelHe : day.label}
+              </span>
               <span className={`text-[10px] ${selected ? 'text-white/70' : 'text-gray-400'}`}>
-                {day.labelHe}
+                {locale === 'he' ? day.label : day.labelHe}
               </span>
             </button>
           );
