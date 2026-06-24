@@ -13,12 +13,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <>
-      {process.env.NODE_ENV === 'development' && (
-        <div className="bg-amber-50 border-b border-amber-200 text-amber-800 text-xs text-center py-1.5 px-4">
-          {t.common.demoBanner}
-        </div>
-      )}
-
       <NavBar barberName={barber.name} />
       <AdminEditBar />
 

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useDashboard } from '@/lib/dashboard/context';
-import { clearMockAuthenticatedUser } from '@/lib/auth/mock-auth';
+import { useAuth } from '@/lib/auth-context';
 import { useLanguage } from '@/lib/i18n/context';
 
 function NavIcon({ name }: { name: string }) {
@@ -61,6 +61,7 @@ export function DashboardSidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { user, barber } = useDashboard();
+  const auth = useAuth();
   const { t } = useLanguage();
 
   const navItems: NavItem[] = [
@@ -118,7 +119,7 @@ export function DashboardSidebar() {
         <button
           type="button"
           onClick={() => {
-            clearMockAuthenticatedUser();
+            auth.logout();
             router.push('/login');
           }}
           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-600 hover:bg-gray-50 hover:text-[#111111] transition-colors"
@@ -135,6 +136,7 @@ export function DashboardMobileNav() {
   const pathname = usePathname();
   const router = useRouter();
   const { user } = useDashboard();
+  const auth = useAuth();
   const { t } = useLanguage();
   const [moreOpen, setMoreOpen] = useState(false);
   const [moreVisible, setMoreVisible] = useState(false);
@@ -227,7 +229,7 @@ export function DashboardMobileNav() {
                 onClick={() => {
                   setMoreOpen(false);
                   if (item.href === '/login') {
-                    clearMockAuthenticatedUser();
+                    auth.logout();
                     router.push('/login');
                   } else router.push(item.href);
                 }}

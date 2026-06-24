@@ -1,10 +1,11 @@
 // TODO [ASAF]: Replace with real API call
 'use client';
 
-import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
+import { Suspense, useCallback, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
-  mockSetupSession,
+  mockValidateToken,
+  type SiteLanguage,
   type SetupData,
 } from '@/lib/mock';
 import {
@@ -35,41 +36,458 @@ import { SetupShellProvider, useSetupShell } from '@/components/setup/SetupShell
 import { useLanguage } from '@/lib/i18n/context';
 import { getSetupTranslations } from '@/lib/setup/translations';
 
-function getInitialSetupStep(searchParams: ReturnType<typeof useSearchParams>) {
-  const requestedStep = Number(searchParams.get('step'));
-  return Number.isInteger(requestedStep) && requestedStep >= 1 && requestedStep <= 5
-    ? requestedStep
-    : mockSetupSession.currentStep;
+type AccountErrors = {
+  email?: string;
+  password?: string;
+  confirmPassword?: string;
+};
+
+const LANGUAGE_OPTIONS: Array<{
+  id: SiteLanguage;
+  flag: string;
+  label: string;
+}> = [
+  { id: 'he', flag: '🇮🇱', label: 'עברית' },
+  { id: 'en', flag: '🇬🇧', label: 'English' },
+  { id: 'ar', flag: '🇸🇦', label: 'العربية' },
+  { id: 'ru', flag: '🇷🇺', label: 'Русский' },
+];
+
+const AUTH_SESSION_KEY = 'cutsite_session';
+const LEGACY_SESSION_EMAIL_KEY = 'cutsite.mockAuthEmail';
+
+function accountKey(token: string) {
+  return `cutsite_setup_account:${token}`;
+}
+
+function progressKey(token: string) {
+  return `cutsite_setup_progress:${token}`;
+}
+
+function hasCreatedSetupAccount(token: string) {
+  if (typeof window === 'undefined') return false;
+  return localStorage.getItem(accountKey(token)) === 'true';
+}
+
+function saveSetupProgress(token: string, currentStep: number, data: SetupData) {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(
+    progressKey(token),
+    JSON.stringify({
+      currentStep,
+      data,
+    }),
+  );
+}
+
+function readSetupProgress(token: string): { currentStep: number; data: SetupData } | null {
+  if (typeof window === 'undefined') return null;
+  const stored = localStorage.getItem(progressKey(token));
+  if (!stored) return null;
+
+  try {
+    return JSON.parse(stored) as { currentStep: number; data: SetupData };
+  } catch {
+    localStorage.removeItem(progressKey(token));
+    return null;
+  }
+}
+
+function saveSetupAccountSession(token: string, email: string) {
+  if (typeof window === 'undefined') return;
+  const user = {
+    id: `setup-${email}`,
+    email,
+    name: email.split('@')[0],
+    role: 'OWNER' as const,
+    barberId: '1',
+    teamMemberId: null,
+  };
+
+  localStorage.setItem(
+    AUTH_SESSION_KEY,
+    JSON.stringify({
+      user,
+      loginAt: Date.now(),
+    }),
+  );
+  localStorage.setItem(LEGACY_SESSION_EMAIL_KEY, email);
+  localStorage.setItem(accountKey(token), 'true');
+  window.dispatchEvent(new Event('cutsite-auth-change'));
+}
+
+function PasswordVisibilityIcon({ visible }: { visible: boolean }) {
+  return visible ? (
+    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88" />
+    </svg>
+  ) : (
+    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+    </svg>
+  );
+}
+
+function getPasswordStrength(password: string): {
+  bars: number;
+  label: string;
+  colorClass: string;
+} {
+  if (password.length < 8) return { bars: 0, label: '', colorClass: '' };
+
+  const hasNumber = /\d/.test(password);
+  const hasSpecial = /[^A-Za-z0-9]/.test(password);
+
+  if (!hasNumber) return { bars: 1, label: 'Weak', colorClass: 'bg-red-500' };
+  if (!hasSpecial) return { bars: 2, label: 'Fair', colorClass: 'bg-yellow-500' };
+  if (password.length >= 12) return { bars: 4, label: 'Strong', colorClass: 'bg-green-500' };
+  return { bars: 3, label: 'Good', colorClass: 'bg-green-500' };
 }
 
 export default function SetupPage() {
   return (
-    <SetupShellProvider>
-      <Suspense fallback={<SetupLoading />}>
-        <SetupWizard />
-      </Suspense>
-    </SetupShellProvider>
+    <Suspense fallback={<SetupLoading />}>
+      <SetupEntry />
+    </Suspense>
   );
 }
 
 function SetupLoading() {
-  const { locale } = useLanguage();
-  const t = getSetupTranslations(locale);
-  return <div className="py-12 text-center text-gray-400 text-sm">{t.loading}</div>;
+  return (
+    <div className="min-h-screen bg-white flex items-center justify-center px-4">
+      <div className="flex flex-col items-center gap-4">
+        <p className="text-xl font-semibold tracking-tight text-[#111111]">CutSite</p>
+        <span className="h-5 w-5 rounded-full border-2 border-gray-200 border-t-gray-500 animate-spin" />
+        <p className="text-sm text-gray-400">Verifying your setup link...</p>
+      </div>
+    </div>
+  );
 }
 
-function SetupWizard() {
+function SetupEntry() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const [validatedSetup, setValidatedSetup] = useState<{
+    token: string;
+    currentStep: number;
+    data: SetupData;
+    needsAccount: boolean;
+  } | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function validateToken() {
+      const token = searchParams.get('token');
+      if (!token) {
+        router.replace('/setup/invalid');
+        return;
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      if (cancelled) return;
+
+      const result = mockValidateToken(token);
+
+      if (result.status === 'COMPLETED') {
+        router.replace('/setup/expired');
+        return;
+      }
+
+      if (result.status === 'EXPIRED' || result.status === 'INVALID' || !result.data) {
+        router.replace('/setup/invalid');
+        return;
+      }
+
+      const savedProgress = readSetupProgress(token);
+      const needsAccount = !hasCreatedSetupAccount(token);
+
+      setValidatedSetup({
+        token,
+        currentStep: savedProgress?.currentStep ?? result.currentStep,
+        data: savedProgress?.data ?? result.data,
+        needsAccount,
+      });
+    }
+
+    validateToken();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [router, searchParams]);
+
+  if (!validatedSetup) return <SetupLoading />;
+
+  if (validatedSetup.needsAccount) {
+    return (
+      <AccountSetupGate
+        token={validatedSetup.token}
+        initialData={validatedSetup.data}
+        onComplete={(data) =>
+          setValidatedSetup((setup) =>
+            setup
+              ? {
+                  ...setup,
+                  currentStep: 1,
+                  data,
+                  needsAccount: false,
+                }
+              : setup,
+          )
+        }
+      />
+    );
+  }
+
+  return (
+    <SetupShellProvider>
+      <SetupWizardContent
+        token={validatedSetup.token}
+        initialStep={validatedSetup.currentStep}
+        initialData={validatedSetup.data}
+      />
+    </SetupShellProvider>
+  );
+}
+
+function AccountSetupGate({
+  token,
+  initialData,
+  onComplete,
+}: {
+  token: string;
+  initialData: SetupData;
+  onComplete: (data: SetupData) => void;
+}) {
+  const { locale } = useLanguage();
+  const t = getSetupTranslations(locale);
+  const [data, setData] = useState<SetupData>(() => structuredClone(initialData));
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [errors, setErrors] = useState<AccountErrors>({});
+  const passwordStrength = getPasswordStrength(password);
+
+  function validateEmail(email: string): string | undefined {
+    if (!email.trim()) return t.step6.emailRequired;
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) return t.step6.emailInvalid;
+    return undefined;
+  }
+
+  function validatePassword(value: string): string | undefined {
+    if (!value) return t.step6.passwordRequired;
+    if (value.length < 8) return t.step6.passwordMin;
+    if (!/\d/.test(value)) return t.step6.passwordNumber;
+    return undefined;
+  }
+
+  function validateConfirmPassword(value: string): string | undefined {
+    if (!value) return t.step6.confirmRequired;
+    if (password !== value) return t.step6.confirmMismatch;
+    return undefined;
+  }
+
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+
+    const nextErrors: AccountErrors = {
+      email: validateEmail(data.account.email),
+      password: validatePassword(password),
+      confirmPassword: validateConfirmPassword(confirmPassword),
+    };
+    setErrors(nextErrors);
+
+    if (nextErrors.email || nextErrors.password || nextErrors.confirmPassword) return;
+
+    // TODO [ASAF]: Create account with Supabase Auth before allowing setup access.
+    console.log('Creating account', { email: data.account.email });
+    saveSetupAccountSession(token, data.account.email);
+    saveSetupProgress(token, 1, data);
+    onComplete(data);
+  }
+
+  return (
+    <div className="min-h-screen bg-white px-4 py-10">
+      <div className="mx-auto max-w-md">
+        <p className="text-lg font-semibold text-[#111111]">CutSite</p>
+        <div className="mt-10 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+          <h1 className="text-2xl font-semibold text-[#111111]">{t.step6.title}</h1>
+          <p className="mt-1 text-sm text-gray-500">{t.step6.sub}</p>
+
+          <form onSubmit={handleSubmit} className="mt-6 space-y-5">
+            <div>
+              <label
+                className={`block text-sm font-medium mb-1.5 ${
+                  errors.email ? 'text-red-500' : 'text-[#111111]'
+                }`}
+              >
+                {t.step6.email}
+              </label>
+              <input
+                type="email"
+                required
+                value={data.account.email}
+                onChange={(event) => {
+                  const email = event.target.value;
+                  setData((current) => ({
+                    ...current,
+                    account: { ...current.account, email },
+                  }));
+                  setErrors((current) => ({ ...current, email: validateEmail(email) }));
+                }}
+                className={`w-full rounded-xl border px-4 py-3 text-sm outline-none ${
+                  errors.email ? 'border-red-500' : 'border-gray-200'
+                }`}
+              />
+              <FieldError message={errors.email ?? null} />
+            </div>
+
+            <div>
+              <label
+                className={`block text-sm font-medium mb-1.5 ${
+                  errors.password ? 'text-red-500' : 'text-[#111111]'
+                }`}
+              >
+                {t.step6.password}
+              </label>
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  value={password}
+                  onChange={(event) => {
+                    const value = event.target.value;
+                    setPassword(value);
+                    setErrors((current) => ({
+                      ...current,
+                      password: validatePassword(value),
+                      confirmPassword: confirmPassword
+                        ? value === confirmPassword
+                          ? undefined
+                          : t.step6.confirmMismatch
+                        : current.confirmPassword,
+                    }));
+                  }}
+                  className={`w-full rounded-xl border py-3 pl-4 pr-11 text-sm outline-none ${
+                    errors.password ? 'border-red-500' : 'border-gray-200'
+                  }`}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((visible) => !visible)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600"
+                  aria-label={showPassword ? t.step6.hidePassword : t.step6.showPassword}
+                >
+                  <PasswordVisibilityIcon visible={showPassword} />
+                </button>
+              </div>
+              <FieldError message={errors.password ?? null} />
+
+              <div className="mt-3">
+                <div className="flex gap-1">
+                  {[1, 2, 3, 4].map((bar) => (
+                    <span
+                      key={bar}
+                      className={`h-1 w-1/4 rounded-full ${
+                        passwordStrength.bars >= bar
+                          ? passwordStrength.colorClass
+                          : 'bg-gray-100'
+                      }`}
+                    />
+                  ))}
+                </div>
+                {passwordStrength.bars > 0 && (
+                  <p className="mt-1.5 text-xs text-gray-500">
+                    {passwordStrength.bars === 1 && t.step6.weak}
+                    {passwordStrength.bars === 2 && t.step6.fair}
+                    {passwordStrength.bars === 3 && t.step6.good}
+                    {passwordStrength.bars === 4 && t.step6.strong}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div>
+              <label
+                className={`block text-sm font-medium mb-1.5 ${
+                  errors.confirmPassword ? 'text-red-500' : 'text-[#111111]'
+                }`}
+              >
+                {t.step6.confirmPassword}
+              </label>
+              <div className="relative">
+                <input
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  required
+                  value={confirmPassword}
+                  onChange={(event) => {
+                    const value = event.target.value;
+                    setConfirmPassword(value);
+                    setErrors((current) => ({
+                      ...current,
+                      confirmPassword: validateConfirmPassword(value),
+                    }));
+                  }}
+                  className={`w-full rounded-xl border py-3 pl-4 pr-11 text-sm outline-none ${
+                    errors.confirmPassword ? 'border-red-500' : 'border-gray-200'
+                  }`}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword((visible) => !visible)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600"
+                  aria-label={showConfirmPassword ? t.step6.hidePassword : t.step6.showPassword}
+                >
+                  <PasswordVisibilityIcon visible={showConfirmPassword} />
+                </button>
+              </div>
+              <FieldError message={errors.confirmPassword ?? null} />
+            </div>
+
+            <div className="bg-gray-50 rounded-xl p-4 text-sm text-gray-500">
+              <p className="mb-3">{t.step6.infoTitle}</p>
+              <div className="space-y-2">
+                {[t.step6.manageSite, t.step6.manageBookings, t.step6.manageTeam].map((line) => (
+                  <p key={line} className="flex items-start gap-2">
+                    <span className="text-green-500 flex-shrink-0">✓</span>
+                    <span>{line}</span>
+                  </p>
+                ))}
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              className="w-full rounded-xl bg-[#111111] py-3.5 text-sm font-semibold text-white hover:bg-gray-800"
+            >
+              {t.step6.createAccount}
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SetupWizardContent({
+  token,
+  initialStep,
+  initialData,
+}: {
+  token: string;
+  initialStep: number;
+  initialData: SetupData;
+}) {
   const { setProgress, registerSaveHandler } = useSetupShell();
   const { locale } = useLanguage();
   const t = getSetupTranslations(locale);
 
-  const [currentStep, setCurrentStep] = useState(() =>
-    getInitialSetupStep(searchParams),
-  );
+  const [currentStep, setCurrentStep] = useState(initialStep);
   const [data, setData] = useState<SetupData>(() =>
-    structuredClone(mockSetupSession.data),
+    structuredClone(initialData),
   );
   const [toast, setToast] = useState<ToastState | null>(null);
   const [saving, setSaving] = useState(false);
@@ -91,26 +509,15 @@ function SetupWizard() {
   const [facebookWarning, setFacebookWarning] = useState<string | null>(null);
   const [hoursErrors, setHoursErrors] = useState<Record<string, string>>({});
 
-  const tokenChecked = useRef(false);
-
-  useEffect(() => {
-    if (tokenChecked.current) return;
-    tokenChecked.current = true;
-
-    const token = searchParams.get('token');
-    // TODO [ASAF]: Replace with real token validation API
-    if (!token || token !== mockSetupSession.token) {
-      router.replace('/setup/invalid');
-      return;
-    }
-    if (mockSetupSession.status === 'COMPLETED') {
-      router.replace('/setup/expired');
-    }
-  }, [searchParams, router]);
-
   useEffect(() => {
     setProgress((currentStep / 6) * 100);
   }, [currentStep, setProgress]);
+
+  useEffect(() => {
+    if (currentStep < 6) {
+      saveSetupProgress(token, currentStep, data);
+    }
+  }, [token, currentStep, data]);
 
   const saveState = useCallback(() => {
     // TODO [ASAF]: Replace with real progress saving to database
@@ -324,6 +731,48 @@ function SetupWizard() {
           <div>
             <h1 className="text-2xl font-semibold text-[#111111]">{t.step1.title}</h1>
             <p className="text-gray-500 mt-1">{t.step1.sub}</p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1.5 text-[#111111]">
+              {t.step1.languageLabel}
+            </label>
+            <p className="text-xs text-gray-500 mb-3">{t.step1.languageSub}</p>
+            <div className="grid grid-cols-2 gap-3">
+              {LANGUAGE_OPTIONS.map((option) => {
+                const selected = data.details.language === option.id;
+                return (
+                  <button
+                    key={option.id}
+                    type="button"
+                    onClick={() =>
+                      setData((d) => ({
+                        ...d,
+                        details: { ...d.details, language: option.id },
+                      }))
+                    }
+                    className={`rounded-xl border p-4 text-start transition-colors ${
+                      selected ? 'border-[#111111] bg-gray-50' : 'border-gray-200 bg-white'
+                    }`}
+                    aria-pressed={selected}
+                  >
+                    <span className="flex items-center gap-3">
+                      <span className="text-2xl" aria-hidden>
+                        {option.flag}
+                      </span>
+                      <span className="text-sm font-medium text-[#111111]">{option.label}</span>
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+            <p className="mt-3 text-xs text-gray-500">
+              {t.step1.languageNote.replace(
+                '{language}',
+                LANGUAGE_OPTIONS.find((option) => option.id === data.details.language)?.label ??
+                  'עברית',
+              )}
+            </p>
           </div>
 
           <div data-field="name">
@@ -853,6 +1302,7 @@ function SetupWizard() {
           />
         </div>
       )}
+
       </div>
 
       <div className="mt-10 flex items-center justify-between gap-4">

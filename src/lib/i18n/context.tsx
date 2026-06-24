@@ -22,7 +22,6 @@ interface LanguageContextValue {
   locale: Locale;
   t: Omit<Translations, 'barber'> & { barber: MockBarber };
   setLocale: (locale: Locale) => void;
-  toggleLocale: () => void;
 }
 
 const LanguageContext = createContext<LanguageContextValue | null>(null);
@@ -52,10 +51,6 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     setLocaleState(next);
   }, []);
 
-  const toggleLocale = useCallback(() => {
-    setLocaleState((current) => (current === 'he' ? 'en' : 'he'));
-  }, []);
-
   const value = useMemo<LanguageContextValue>(() => {
     const base = translations[locale];
     return {
@@ -68,9 +63,8 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
         },
       },
       setLocale,
-      toggleLocale,
     };
-  }, [locale, setLocale, toggleLocale]);
+  }, [locale, setLocale]);
 
   return (
     <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>

@@ -3,6 +3,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import type { BarberService } from '@/lib/mock';
 import { useLanguage } from '@/lib/i18n/context';
 import { FALLBACK_SERVICE_IMAGE, getServiceById } from '@/lib/service-bank';
@@ -69,7 +70,7 @@ export function ServiceModal({ service, isOpen, onClose }: ServiceModalProps) {
   const imageUrl = service.imageUrl ?? bankItem?.defaultImageUrl ?? null;
   const bookingHref = service.bankId ? `/booking?service=${service.bankId}` : '/booking';
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
       <button
         type="button"
@@ -155,6 +156,7 @@ export function ServiceModal({ service, isOpen, onClose }: ServiceModalProps) {
           </Link>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

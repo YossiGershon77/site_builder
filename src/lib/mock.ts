@@ -9,6 +9,7 @@ import { DEFAULT_SERVICE_PRICES } from '@/lib/setup/constants';
 
 export type UserRole = 'OWNER' | 'TEAM_MEMBER';
 export type AppointmentStatus = 'CONFIRMED' | 'PENDING' | 'CANCELLED';
+export type SiteLanguage = 'he' | 'en' | 'ar' | 'ru';
 
 export interface MockUser {
   id: string;
@@ -38,16 +39,18 @@ export const mockCurrentUserAsStaff: MockUser = {
   teamMemberId: 't1',
 };
 
+export const mockCurrentUserAsStaff2: MockUser = {
+  id: 'u3',
+  email: 'amit@demo.com',
+  name: 'Amit Peretz',
+  role: 'TEAM_MEMBER',
+  barberId: '1',
+  teamMemberId: 't2',
+};
+
 export const mockStaffUsers: MockUser[] = [
   mockCurrentUserAsStaff,
-  {
-    id: 'u3',
-    email: 'amit@demo.com',
-    name: 'Amit Peretz',
-    role: 'TEAM_MEMBER',
-    barberId: '1',
-    teamMemberId: 't2',
-  },
+  mockCurrentUserAsStaff2,
   {
     id: 'u4',
     email: 'daniel@demo.com',
@@ -156,6 +159,7 @@ export interface MockBarber {
   address: string;
   neighborhood: string;
   bio: string;
+  language: SiteLanguage;
   whatsappNumber: string;
   instagramUrl: string | null;
   facebookUrl: string | null;
@@ -445,6 +449,7 @@ export type SetupGalleryPhoto = {
 
 export type SetupData = {
   details: {
+    language: SiteLanguage;
     name: string;
     tagline: string;
     whatsappNumber: string;
@@ -475,6 +480,9 @@ export type SetupData = {
   staff: {
     invites: SetupInvite[];
   };
+  account: {
+    email: string;
+  };
 };
 
 // TODO [ASAF]: Replace with real API call
@@ -487,6 +495,7 @@ export const mockSetupSession = {
   expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
   data: {
     details: {
+      language: 'he',
       name: 'Eduardo Peretz',
       tagline: 'Old school cuts, new school precision',
       whatsappNumber: '+972501234567',
@@ -522,8 +531,77 @@ export const mockSetupSession = {
     staff: {
       invites: [] as SetupInvite[],
     },
+    account: {
+      // TODO [ASAF]: Pre-fill from setup session email
+      email: 'eduardo@demo.com',
+    },
   } satisfies SetupData,
 };
+
+export function mockValidateToken(token: string): {
+  status: 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'EXPIRED' | 'INVALID';
+  currentStep: number;
+  data: SetupData | null;
+} {
+  // TODO [ASAF]: Replace with GET /api/setup/validate?token={token}
+  if (token === 'yossi-gershon7-start') {
+    return {
+      status: 'PENDING',
+      currentStep: 1,
+      data: {
+        details: {
+          language: 'he',
+          name: '',
+          tagline: '',
+          whatsappNumber: '',
+          instagramUrl: '',
+          facebookUrl: '',
+          subdomain: '',
+          googleMapsUrl: '',
+          address: '',
+          about: '',
+        },
+        services: {
+          selectedServices: [],
+          globalShowPrices: true,
+          globalShowDurations: true,
+        },
+        hours: {
+          workingDays: [],
+          workStartTime: '',
+          workEndTime: '',
+          breakStart: '',
+          breakEnd: '',
+          hasBreak: false,
+        },
+        gallery: {
+          placePhotos: [],
+          profilePhoto: null,
+        },
+        staff: {
+          invites: [],
+        },
+        account: {
+          email: 'yossi.gershon7@gmail.com',
+        },
+      },
+    };
+  }
+  if (token === 'abc123xyz') {
+    return {
+      status: mockSetupSession.status,
+      currentStep: mockSetupSession.currentStep,
+      data: mockSetupSession.data,
+    };
+  }
+  if (token === 'used-token') {
+    return { status: 'COMPLETED', currentStep: 6, data: null };
+  }
+  if (token === 'expired-token') {
+    return { status: 'EXPIRED', currentStep: 1, data: null };
+  }
+  return { status: 'INVALID', currentStep: 1, data: null };
+}
 
 export function buildBarberFromSetup(setup: SetupData): MockBarber {
   return {
@@ -537,9 +615,10 @@ export function buildBarberFromSetup(setup: SetupData): MockBarber {
     address: setup.details.address,
     neighborhood: setup.details.address,
     bio: setup.details.about || '',
+    language: setup.details.language,
     googleMapsUrl: setup.details.googleMapsUrl || null,
     googleReviewsUrl: setup.details.googleMapsUrl || null,
-    heroImageUrl: setup.gallery.placePhotos[0]?.url || null,
+    heroImageUrl: baseBarber.heroImageUrl || setup.gallery.placePhotos[0]?.url || null,
     profileImageUrl: setup.gallery.profilePhoto || null,
     isPublished: true,
     workingDays: setup.hours.workingDays,

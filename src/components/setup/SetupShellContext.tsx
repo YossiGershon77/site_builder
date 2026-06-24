@@ -1,7 +1,6 @@
 'use client';
 
 import { createContext, useContext, useRef, useState, type ReactNode } from 'react';
-import { LanguageToggle } from '@/components/LanguageToggle';
 import { getSetupTranslations } from '@/lib/setup/translations';
 import { useLanguage } from '@/lib/i18n/context';
 
@@ -59,7 +58,6 @@ function SetupShell({
         <div className="max-w-2xl mx-auto px-4 py-4 flex items-center justify-between gap-3">
           <span className="text-lg font-semibold text-[#111111]">CutSite</span>
           <div className="flex items-center gap-3">
-            <LanguageToggle />
             <button
               type="button"
               onClick={onSaveExit}

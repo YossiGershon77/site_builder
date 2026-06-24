@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { ScheduleCalendar } from '@/components/dashboard/ScheduleCalendar';
+import { Modal } from '@/components/dashboard/Modal';
 import { useDashboard } from '@/lib/dashboard/context';
 import { useLanguage } from '@/lib/i18n/context';
 import { getDaysOffForDate, useDaysOff } from '@/lib/days-off/store';
@@ -12,7 +13,18 @@ import {
   getGapMinutes,
   getNextAvailableSlot,
 } from '@/lib/dashboard/utils';
-import type { Appointment, AppointmentStatus } from '@/lib/mock';
+import type { Appointment, AppointmentStatus, SiteLanguage } from '@/lib/mock';
+
+const LANGUAGE_OPTIONS: Array<{
+  id: SiteLanguage;
+  flag: string;
+  label: string;
+}> = [
+  { id: 'he', flag: '🇮🇱', label: 'עברית' },
+  { id: 'en', flag: '🇬🇧', label: 'English' },
+  { id: 'ar', flag: '🇸🇦', label: 'العربية' },
+  { id: 'ru', flag: '🇷🇺', label: 'Русский' },
+];
 
 function StatusBadge({
   status,
@@ -81,6 +93,8 @@ export default function SchedulePage() {
     return d;
   });
   const [staffFilter, setStaffFilter] = useState('all');
+  const [languageModalOpen, setLanguageModalOpen] = useState(false);
+  const [selectedLanguage, setSelectedLanguage] = useState<SiteLanguage>(barber.language);
   const { daysOff } = useDaysOff();
 
   const appointments = useMemo(
@@ -103,6 +117,14 @@ export default function SchedulePage() {
       .filter((m) => m.inviteAccepted && m.isActive)
       .map((m) => ({ value: m.id, label: m.name.split(' ')[0] })),
   ];
+  const currentLanguage =
+    LANGUAGE_OPTIONS.find((option) => option.id === selectedLanguage) ?? LANGUAGE_OPTIONS[0];
+
+  function saveLanguage() {
+    // TODO [ASAF]: PATCH /api/barber/{id}/language
+    console.log('Language changed to', selectedLanguage);
+    setLanguageModalOpen(false);
+  }
 
   return (
     <div className="max-w-5xl">
@@ -230,6 +252,89 @@ export default function SchedulePage() {
           />
         </div>
       </div>
+
+      {user.role === 'OWNER' && (
+        <div className="mt-8 max-w-xl rounded-xl border border-gray-200 bg-white p-5">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="text-sm font-medium text-[#111111]">Site language</p>
+              <p className="mt-2 flex items-center gap-2 text-sm text-gray-600">
+                <span className="text-2xl" aria-hidden>
+                  {currentLanguage.flag}
+                </span>
+                <span>{currentLanguage.label}</span>
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setLanguageModalOpen(true)}
+              className="text-sm font-medium text-[#111111] hover:underline"
+            >
+              Change
+            </button>
+          </div>
+          <p className="mt-4 text-sm text-gray-500">
+            Changing the language updates all platform text. Your custom content (bio,
+            descriptions, names) won't be translated — you'll need to update them manually.
+          </p>
+        </div>
+      )}
+
+      <Modal
+        open={languageModalOpen}
+        onClose={() => setLanguageModalOpen(false)}
+        className="max-w-lg"
+      >
+        <div>
+          <h2 className="text-xl font-semibold text-[#111111]">Site language</h2>
+          <p className="mt-1 text-sm text-gray-500">
+            Choose the language visitors will see on your site.
+          </p>
+          <div className="mt-5 grid grid-cols-2 gap-3">
+            {LANGUAGE_OPTIONS.map((option) => {
+              const selected = selectedLanguage === option.id;
+              return (
+                <button
+                  key={option.id}
+                  type="button"
+                  onClick={() => setSelectedLanguage(option.id)}
+                  className={`rounded-xl border p-4 text-start transition-colors ${
+                    selected ? 'border-[#111111] bg-gray-50' : 'border-gray-200 bg-white'
+                  }`}
+                  aria-pressed={selected}
+                >
+                  <span className="flex items-center gap-3">
+                    <span className="text-2xl" aria-hidden>
+                      {option.flag}
+                    </span>
+                    <span className="text-sm font-medium text-[#111111]">{option.label}</span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+          <p className="mt-4 text-sm text-gray-500">
+            Changing the language updates all platform text. Your custom content (bio,
+            descriptions, names) won't be translated — you'll need to update them manually.
+          </p>
+          <div className="mt-6 flex justify-end gap-3">
+            <button
+              type="button"
+              onClick={() => setLanguageModalOpen(false)}
+              className="px-4 py-2 text-sm font-medium text-gray-500 hover:text-[#111111]"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={saveLanguage}
+              className="rounded-xl bg-[#111111] px-5 py-2.5 text-sm font-semibold text-white hover:bg-gray-800"
+            >
+              Save
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

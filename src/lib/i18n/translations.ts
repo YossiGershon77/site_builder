@@ -13,8 +13,7 @@ const sharedBarber = {
   slug: 'eduardo',
   whatsappNumber: '+972501234567',
   googleReviewsUrl: 'https://google.com/maps',
-  heroImageUrl:
-    'https://images.unsplash.com/photo-1585747860715-2ba37e788b70?w=1400&q=80',
+  heroImageUrl: '/images/default-hero.png',
   profileImageUrl:
     'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&q=80',
   isPublished: true,

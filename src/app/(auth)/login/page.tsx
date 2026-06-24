@@ -1,10 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { LanguageToggle } from '@/components/LanguageToggle';
 import { useLanguage } from '@/lib/i18n/context';
-import { findMockUserByEmail, setMockAuthenticatedUser } from '@/lib/auth/mock-auth';
+import { useAuth } from '@/lib/auth-context';
 
 function ScissorsIcon({ className = '' }: { className?: string }) {
   return (
@@ -19,11 +18,18 @@ function ScissorsIcon({ className = '' }: { className?: string }) {
 export default function LoginPage() {
   const router = useRouter();
   const { t, locale } = useLanguage();
+  const auth = useAuth();
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  useEffect(() => {
+    if (!auth.isLoading && auth.user) {
+      router.push('/dashboard');
+    }
+  }, [auth.isLoading, auth.user, router]);
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError('');
     setLoading(true);
@@ -32,17 +38,22 @@ export default function LoginPage() {
     const email = String(form.get('email') ?? '').trim().toLowerCase();
     const password = String(form.get('password') ?? '');
 
-    console.log('Login attempt:', { email, password });
-
-    const user = findMockUserByEmail(email);
-    if (user) {
-      setMockAuthenticatedUser(user.email);
+    const success = await auth.login(email, password);
+    if (success) {
       router.push('/dashboard');
       return;
     }
 
     setError(t.login.invalidCredentials);
     setLoading(false);
+  }
+
+  if (auth.isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <span className="h-5 w-5 rounded-full border-2 border-gray-200 border-t-gray-500 animate-spin" />
+      </div>
+    );
   }
 
   return (
@@ -83,10 +94,6 @@ export default function LoginPage() {
       {/* Form panel */}
       <div className="flex-1 flex flex-col items-center justify-center px-6 py-12 bg-gray-50">
         <div className="w-full max-w-[400px]">
-          <div className="flex justify-end mb-6">
-            <LanguageToggle />
-          </div>
-
           {/* Mobile logo */}
           <div className="lg:hidden flex items-center justify-center gap-2.5 mb-10">
             <div className="w-9 h-9 rounded-xl bg-[#111111] flex items-center justify-center">
@@ -171,9 +178,12 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-3.5 bg-[#111111] text-white font-semibold rounded-xl hover:bg-gray-800 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                className="w-full py-3.5 bg-[#111111] text-white font-semibold rounded-xl hover:bg-gray-800 transition-colors disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
               >
-                {loading ? t.login.signingIn : t.login.signIn}
+                {loading && (
+                  <span className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                )}
+                <span>{loading ? t.login.signingIn : t.login.signIn}</span>
               </button>
             </form>
 

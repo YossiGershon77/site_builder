@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useLanguage } from '@/lib/i18n/context';
 import { getBarberServiceByBankId, type BarberService, type TeamMember } from '@/lib/mock';
@@ -19,15 +19,12 @@ type WizardStep = 'service' | 'barber' | 'datetime' | 'details';
 type StaffSelection = string | 'anyone';
 type StepDirection = 'forward' | 'back';
 
-function getSteps(hasTeam: boolean): WizardStep[] {
-  return hasTeam
-    ? ['service', 'barber', 'datetime', 'details']
-    : ['service', 'datetime', 'details'];
+function getSteps(): WizardStep[] {
+  return ['service', 'barber', 'datetime', 'details'];
 }
 
 function getStepTitle(
   step: WizardStep,
-  hasTeam: boolean,
   t: ReturnType<typeof useLanguage>['t'],
 ): string {
   switch (step) {
@@ -36,9 +33,9 @@ function getStepTitle(
     case 'barber':
       return t.booking.step2;
     case 'datetime':
-      return hasTeam ? t.booking.step3 : t.booking.step2NoTeam;
+      return t.booking.step3;
     case 'details':
-      return hasTeam ? t.booking.step4 : t.booking.step3NoTeam;
+      return t.booking.step4;
   }
 }
 
@@ -164,9 +161,11 @@ function BookingWizard() {
   const searchParams = useSearchParams();
   const { t, locale } = useLanguage();
   const barber = t.barber;
-  const acceptedTeamMembers = barber.teamMembers.filter((member) => member.inviteAccepted);
+  const acceptedTeamMembers = barber.teamMembers.filter(
+    (member) => member.isActive && member.inviteAccepted,
+  );
   const hasTeam = acceptedTeamMembers.length > 0;
-  const steps = getSteps(hasTeam);
+  const steps = getSteps();
   const mockBookings = useMemo(() => getMockBookings(), []);
   const { daysOff } = useDaysOff();
 
@@ -184,6 +183,9 @@ function BookingWizard() {
   const [phone, setPhone] = useState('');
   const [notes, setNotes] = useState('');
   const preselectedFromUrl = useRef(false);
+  const didRenderInitialStep = useRef(false);
+  const bookingWizardRef = useRef<HTMLDivElement | null>(null);
+  const timesSectionRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (preselectedFromUrl.current) return;
@@ -197,6 +199,15 @@ function BookingWizard() {
     setSelectedServiceId(service.id);
     setStepIndex(1);
   }, [searchParams]);
+
+  useLayoutEffect(() => {
+    if (!didRenderInitialStep.current) {
+      didRenderInitialStep.current = true;
+      return;
+    }
+
+    scrollBookingWizardIntoView();
+  }, [stepIndex]);
 
   const currentStep = steps[stepIndex];
   const selectedService = barber.services.find((s) => s.id === selectedServiceId) ?? null;
@@ -217,22 +228,30 @@ function BookingWizard() {
     );
   }, [barber, selectedService, selectedDate, selectedMemberId, hasTeam, mockBookings, daysOff]);
 
-  const stepLabels = hasTeam
-    ? [
-        t.booking.wizardSteps.service,
-        t.booking.wizardSteps.barber,
-        t.booking.wizardSteps.datetime,
-        t.booking.wizardSteps.details,
-      ]
-    : [
-        t.booking.wizardSteps.service,
-        t.booking.wizardSteps.datetime,
-        t.booking.wizardSteps.details,
-      ];
+  const stepLabels = [
+    t.booking.wizardSteps.service,
+    t.booking.wizardSteps.barber,
+    t.booking.wizardSteps.datetime,
+    t.booking.wizardSteps.details,
+  ];
 
   function advanceStep() {
     setDirection('forward');
     setStepIndex((prev) => Math.min(prev + 1, steps.length - 1));
+  }
+
+  function scrollBookingWizardIntoView() {
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        const wizardTop = bookingWizardRef.current?.getBoundingClientRect().top;
+        if (wizardTop === undefined) return;
+
+        const top = Math.max(window.scrollY + wizardTop - 16, 0);
+        const scroller = document.scrollingElement ?? document.documentElement;
+        scroller.scrollTo({ top, behavior: 'auto' });
+        window.scrollTo({ top, behavior: 'auto' });
+      });
+    });
   }
 
   function handleSelectService(service: BarberService) {
@@ -265,6 +284,9 @@ function BookingWizard() {
     const date = new Date(calendarYear, calendarMonth, day);
     setSelectedDate(date);
     setSelectedTime(null);
+    window.setTimeout(() => {
+      timesSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 80);
   }
 
   function handleSelectTime(slot: string) {
@@ -309,12 +331,12 @@ function BookingWizard() {
     .replace('{current}', String(stepIndex + 1))
     .replace('{total}', String(steps.length));
 
-  const stepTitle = getStepTitle(currentStep, hasTeam, t);
+  const stepTitle = getStepTitle(currentStep, t);
   const stepAnimation =
     direction === 'forward' ? 'animate-step-in-right' : 'animate-step-in-left';
 
   return (
-    <div className="py-12 px-4 max-w-2xl mx-auto">
+    <div ref={bookingWizardRef} className="py-12 px-4 max-w-2xl mx-auto">
       <div className="mb-8 animate-step-fade-up">
         <h1 className="text-3xl md:text-4xl font-semibold tracking-tight text-[#111111]">
           {t.booking.title}
@@ -566,32 +588,34 @@ function BookingWizard() {
             </div>
           </div>
 
-          {!selectedDate && (
-            <p className="text-sm text-gray-400">{t.booking.selectDateHint}</p>
-          )}
+          <div ref={timesSectionRef} className="scroll-mt-6">
+            {!selectedDate && (
+              <p className="text-sm text-gray-400">{t.booking.selectDateHint}</p>
+            )}
 
-          {selectedDate && availableSlots.length === 0 && (
-            <p className="text-sm text-gray-500">{t.booking.noTimesAvailable}</p>
-          )}
+            {selectedDate && availableSlots.length === 0 && (
+              <p className="text-sm text-gray-500">{t.booking.noTimesAvailable}</p>
+            )}
 
-          {selectedDate && availableSlots.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              {availableSlots.map((slot) => (
-                <button
-                  key={slot}
-                  type="button"
-                  onClick={() => handleSelectTime(slot)}
-                  className={`px-4 py-2 rounded-full text-sm border transition-colors ${
-                    selectedTime === slot
-                      ? 'bg-[#111111] text-white border-[#111111]'
-                      : 'border-gray-200 text-gray-700 hover:border-gray-400'
-                  }`}
-                >
-                  {slot}
-                </button>
-              ))}
-            </div>
-          )}
+            {selectedDate && availableSlots.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {availableSlots.map((slot) => (
+                  <button
+                    key={slot}
+                    type="button"
+                    onClick={() => handleSelectTime(slot)}
+                    className={`px-4 py-2 rounded-full text-sm border transition-colors ${
+                      selectedTime === slot
+                        ? 'bg-[#111111] text-white border-[#111111]'
+                        : 'border-gray-200 text-gray-700 hover:border-gray-400'
+                    }`}
+                  >
+                    {slot}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </section>
       )}
 

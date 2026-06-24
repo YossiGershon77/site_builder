@@ -137,6 +137,15 @@ export function SetupComplete({
               )}
             </button>
           </div>
+          <div className="mt-3 text-sm text-gray-500 space-y-1">
+            <p>{t.completeScreen.signedInAs.replace('{email}', data.account.email)}</p>
+            <p>
+              {t.completeScreen.manageAt}{' '}
+              <Link href="/login" className="font-medium text-[#111111] hover:underline">
+                {t.completeScreen.loginLink}
+              </Link>
+            </p>
+          </div>
         </div>
 
         <div className="mt-8 flex flex-col sm:flex-row gap-3">

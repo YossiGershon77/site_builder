@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useLanguage } from '@/lib/i18n/context';
-import { LanguageToggle } from '@/components/LanguageToggle';
 import { getMockAuthenticatedUser } from '@/lib/auth/mock-auth';
 import type { MockUser } from '@/lib/mock';
 
@@ -84,7 +83,6 @@ export function NavBar({ barberName }: NavBarProps) {
             >
               {t.common.bookNow}
             </Link>
-            <LanguageToggle className="ml-2" />
           </div>
 
           <div className="flex md:hidden items-center gap-3">
@@ -138,9 +136,6 @@ export function NavBar({ barberName }: NavBarProps) {
             >
               {t.common.bookNow}
             </Link>
-            <div className="mt-4 pt-4 border-t border-gray-100 px-2">
-              <LanguageToggle />
-            </div>
           </div>
       </div>
     </nav>
